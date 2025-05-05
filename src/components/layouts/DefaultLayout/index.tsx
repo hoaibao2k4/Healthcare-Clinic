@@ -1,57 +1,115 @@
-import * as React from 'react';
-import { createTheme, styled } from '@mui/material/styles';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import DescriptionIcon from '@mui/icons-material/Description';
-import LayersIcon from '@mui/icons-material/Layers';
-import { AppProvider, Navigation, Router } from '@toolpad/core/AppProvider';
-import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import { PageContainer } from '@toolpad/core/PageContainer';
-import Grid from '@mui/material/Grid';
-
+import * as React from "react";
+import { createTheme, styled } from "@mui/material/styles";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import DescriptionIcon from "@mui/icons-material/Description";
+import LayersIcon from "@mui/icons-material/Layers";
+import {
+  AppProvider,
+  Navigation,
+  Router,
+  type Session,
+} from "@toolpad/core/AppProvider";
+import { DashboardLayout } from "@toolpad/core/DashboardLayout";
+import { PageContainer } from "@toolpad/core/PageContainer";
+import Grid from "@mui/material/Grid";
+import { useNavigate, useLocation } from "react-router-dom";
+import FeaturedPlayListIcon from "@mui/icons-material/FeaturedPlayList";
+import QueuePlayNextIcon from "@mui/icons-material/QueuePlayNext";
+import AccountBoxIcon from "@mui/icons-material/AccountBox";
+import { useSelector } from "react-redux";
+import { persistor, RootState } from "@/redux/store";
 const NAVIGATION: Navigation = [
   {
-    kind: 'header',
-    title: 'Main items',
+    kind: "header",
+    title: "Main items",
   },
   {
-    segment: 'dashboard',
-    title: 'Dashboard',
+    segment: "dashboard",
+    title: "Dashboard",
     icon: <DashboardIcon />,
   },
   {
-    segment: 'orders',
-    title: 'Orders',
-    icon: <ShoppingCartIcon />,
+    segment: "exams",
+    title: "Danh sách khám bệnh",
+    icon: <FeaturedPlayListIcon />,
   },
   {
-    kind: 'divider',
+    segment: "records",
+    title: "Phiếu khám bệnh",
+    icon: <QueuePlayNextIcon />,
   },
   {
-    kind: 'header',
-    title: 'Analytics',
+    segment: "patients",
+    title: "Danh sách bệnh nhân",
+    icon: <AccountBoxIcon />,
   },
   {
-    segment: 'reports',
-    title: 'Reports',
+    segment: "drugs",
+    title: "Quản lí thuốc",
     icon: <BarChartIcon />,
     children: [
       {
-        segment: 'sales',
-        title: 'Sales',
+        segment: "drugs-unit",
+        title: "Đơn vị thuốc",
         icon: <DescriptionIcon />,
       },
       {
-        segment: 'traffic',
-        title: 'Traffic',
+        segment: "disease",
+        title: "Danh sách bệnh",
+        icon: <DescriptionIcon />,
+      },
+      {
+        segment: "drugs-type",
+        title: "Loại thuốc",
         icon: <DescriptionIcon />,
       },
     ],
   },
   {
-    segment: 'integrations',
-    title: 'Integrations',
+    segment: "invoice",
+    title: "Invoice",
+    icon: <BarChartIcon />,
+    children: [
+      {
+        segment: "invoice-list",
+        title: "Invoice List",
+        icon: <DescriptionIcon />,
+      },
+      {
+        segment: "addpatient",
+        title: "Add Patient",
+        icon: <DescriptionIcon />,
+      },
+    ],
+  },
+  {
+    kind: "divider",
+  },
+  {
+    kind: "header",
+    title: "Analytics",
+  },
+  {
+    segment: "reports",
+    title: "Reports",
+    icon: <BarChartIcon />,
+    children: [
+      {
+        segment: "sales",
+        title: "Sales",
+        icon: <DescriptionIcon />,
+      },
+      {
+        segment: "traffic",
+        title: "Traffic",
+        icon: <DescriptionIcon />,
+      },
+    ],
+  },
+  {
+    segment: "integrations",
+    title: "Integrations",
     icon: <LayersIcon />,
   },
 ];
@@ -59,7 +117,7 @@ const NAVIGATION: Navigation = [
 const demoTheme = createTheme({
   colorSchemes: { light: true, dark: true },
   cssVariables: {
-    colorSchemeSelector: 'class',
+    colorSchemeSelector: "class",
   },
   breakpoints: {
     values: {
@@ -73,85 +131,125 @@ const demoTheme = createTheme({
 });
 
 function useDemoRouter(initialPath: string): Router {
-  const [pathname, setPathname] = React.useState(initialPath);
+  const [pathname, setPathname] = React.useState(
+    initialPath == "/" ? "/dashboard" : initialPath
+  );
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const router = React.useMemo(() => {
     return {
-      pathname,
-      searchParams: new URLSearchParams(),
-      navigate: (path: string | URL) => setPathname(String(path)),
+      pathname: location.pathname == "/" ? "/dashboard" : location.pathname,
+      searchParams: new URLSearchParams(location.search),
+      navigate: (path: string | URL) => {
+        const pathStr = path.toString();
+        setPathname(pathStr);
+        1;
+        navigate(pathStr);
+      },
     };
-  }, [pathname]);
+  }, [location, navigate, pathname]);
 
   return router;
 }
 
-const Skeleton = styled('div')<{ height: number }>(({ theme, height }) => ({
+const Skeleton = styled("div")<{ height: number }>(({ theme, height }) => ({
   backgroundColor: theme.palette.action.hover,
   borderRadius: theme.shape.borderRadius,
   height,
   content: '" "',
 }));
 
-export default function DefaultLayout(props: any) {
-  const { window } = props;
-
-  const router = useDemoRouter('/dashboard');
-
-  // Remove this const when copying and pasting into your project.
-  const demoWindow = window ? window() : undefined;
-
+export default function DefaultLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useDemoRouter("/");
+  const user = useSelector((state: RootState) => state.auth.login.currentUser)
+  console.log(user?.username)
+  const [session, setSession] = React.useState<Session | null>({
+    user: {
+      name: user?.username,
+      email: `${user?.username}healthcare@gmail.com`,
+      image: "https://avatars.githubusercontent.com/u/19550456",
+    },
+  });
+  const navigate = useNavigate();
+  const authentication = React.useMemo(() => {
+    return {
+      signIn: () => {
+        setSession({
+          user: {
+            name: user?.username,
+            email: "bharatkashyap@outlook.com",
+            image: "https://avatars.githubusercontent.com/u/19550456",
+          },
+        });
+      },
+      signOut: () => {
+        persistor.purge();
+        navigate("/login");
+      },
+    };
+  }, [user]);
+  //
   return (
     <AppProvider
+      session={session}
+      authentication={authentication}
       navigation={NAVIGATION}
       router={router}
       theme={demoTheme}
-      window={demoWindow}
       branding={{
         //logo: <img src="https://mui.com/static/logo.png" alt="MUI logo" />,
-        title: 'Healthcare Clinic',
+        title: "Healthcare Clinic",
         //homeUrl: '/toolpad/core/introduction',
       }}
     >
-      <DashboardLayout>
-        <PageContainer>
-          <Grid container spacing={1}>
-            <Grid size={5} />
-            <Grid size={12}>
-              <Skeleton height={14} />
-            </Grid>
-            <Grid size={12}>
-              <Skeleton height={14} />
-            </Grid>
-            <Grid size={4}>
-              <Skeleton height={100} />
-            </Grid>
-            <Grid size={8}>
-              <Skeleton height={100} />
-            </Grid>
+      <div className="bg-[#2e37a40d]">
+        <DashboardLayout>
+          <PageContainer>
+            {children || (
+              <Grid container spacing={1}>
+                <Grid size={5} />
+                <Grid size={12}>
+                  <Skeleton height={14} />
+                </Grid>
+                <Grid size={12}>
+                  <Skeleton height={14} />
+                </Grid>
+                <Grid size={4}>
+                  <Skeleton height={100} />
+                </Grid>
+                <Grid size={8}>
+                  <Skeleton height={100} />
+                </Grid>
 
-            <Grid size={12}>
-              <Skeleton height={150} />
-            </Grid>
-            <Grid size={12}>
-              <Skeleton height={14} />
-            </Grid>
+                <Grid size={12}>
+                  <Skeleton height={150} />
+                </Grid>
+                <Grid size={12}>
+                  <Skeleton height={14} />
+                </Grid>
 
-            <Grid size={3}>
-              <Skeleton height={100} />
-            </Grid>
-            <Grid size={3}>
-              <Skeleton height={100} />
-            </Grid>
-            <Grid size={3}>
-              <Skeleton height={100} />
-            </Grid>
-            <Grid size={3}>
-              <Skeleton height={100} />
-            </Grid>
-          </Grid>
-        </PageContainer>
-      </DashboardLayout>
+                <Grid size={3}>
+                  <Skeleton height={100} />
+                </Grid>
+                <Grid size={3}>
+                  <Skeleton height={100} />
+                </Grid>
+                <Grid size={3}>
+                  <Skeleton height={100} />
+                </Grid>
+                <Grid size={3}>
+                  <Skeleton height={100} />
+                </Grid>
+              </Grid>
+            )}
+          </PageContainer>
+        </DashboardLayout>
+      </div>
     </AppProvider>
   );
 }

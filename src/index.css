@@ -118,3 +118,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px rgba(161, 201, 255, 0.8) inset !important; /* from-blue-400/60 */
+  -webkit-text-fill-color: #1e3a8a !important; /* text-blue-800 hoặc gần với màu của bạn */
+}
