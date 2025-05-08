@@ -9,12 +9,12 @@ export interface DrugUnit {
 export interface Drug {
   id?: number;
   isNew?: boolean;
-  drugId: string;
+  drugId: number;
   drugName: string;
   description: string;
   quantity: number;
   importPrice: number;
   expirationDate: string;
   drugsUnit: DrugUnit;
-  unitId?: string
+  unitId?: number
 }

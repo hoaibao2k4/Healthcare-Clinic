@@ -157,7 +157,7 @@ export const updateDrug = async (drug: Drug) => {
       quantity: drug.quantity,
       importPrice: drug.importPrice,
       expirationDate: drug.expirationDate,
-      drugsUnit: drug.drugsUnit.unitId,
+      unitId: drug.unitId,
     });
     const res = await response.patch(
       `/api/public/drugs/edit-drug/${drug.drugId}`,

@@ -19,6 +19,15 @@ import QueuePlayNextIcon from "@mui/icons-material/QueuePlayNext";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import { useSelector } from "react-redux";
 import { persistor, RootState } from "@/redux/store";
+import RoleModal from "../components/Modal";
+import PriceChangeIcon from '@mui/icons-material/PriceChange';
+import PaidIcon from '@mui/icons-material/Paid';
+import MedicationIcon from '@mui/icons-material/Medication';
+import logo from '@/assets/icons/v987-18a-removebg-preview.png'
+import avatar from '@/assets/images/doctorAvatar.jpg'
+import MedicationLiquidIcon from '@mui/icons-material/MedicationLiquid';
+import VaccinesIcon from '@mui/icons-material/Vaccines';
+import SanitizerIcon from '@mui/icons-material/Sanitizer';
 const NAVIGATION: Navigation = [
   {
     kind: "header",
@@ -26,7 +35,7 @@ const NAVIGATION: Navigation = [
   },
   {
     segment: "dashboard",
-    title: "Dashboard",
+    title: "Bảng điều khiển",
     icon: <DashboardIcon />,
   },
   {
@@ -47,12 +56,12 @@ const NAVIGATION: Navigation = [
   {
     segment: "drugs",
     title: "Quản lí thuốc",
-    icon: <BarChartIcon />,
+    icon: <MedicationLiquidIcon />,
     children: [
       {
         segment: "drugs-unit",
         title: "Đơn vị thuốc",
-        icon: <DescriptionIcon />,
+        icon: <VaccinesIcon />,
       },
       {
         segment: "disease",
@@ -62,26 +71,14 @@ const NAVIGATION: Navigation = [
       {
         segment: "drugs-type",
         title: "Loại thuốc",
-        icon: <DescriptionIcon />,
+        icon: <SanitizerIcon />,
       },
     ],
   },
   {
     segment: "invoice",
-    title: "Invoice",
-    icon: <BarChartIcon />,
-    children: [
-      {
-        segment: "invoice-list",
-        title: "Invoice List",
-        icon: <DescriptionIcon />,
-      },
-      {
-        segment: "addpatient",
-        title: "Add Patient",
-        icon: <DescriptionIcon />,
-      },
-    ],
+    title: "Hóa đơn",
+    icon: <PriceChangeIcon/>
   },
   {
     kind: "divider",
@@ -92,24 +89,24 @@ const NAVIGATION: Navigation = [
   },
   {
     segment: "reports",
-    title: "Reports",
+    title: "Báo cáo",
     icon: <BarChartIcon />,
     children: [
       {
-        segment: "sales",
-        title: "Sales",
-        icon: <DescriptionIcon />,
+        segment: "revenue",
+        title: "Doanh thu",
+        icon: <PaidIcon />,
       },
       {
-        segment: "traffic",
-        title: "Traffic",
-        icon: <DescriptionIcon />,
+        segment: "drug-usage",
+        title: "Sử dụng thuốc",
+        icon: <MedicationIcon />,
       },
     ],
   },
   {
     segment: "integrations",
-    title: "Integrations",
+    title: "Cài đặt",
     icon: <LayersIcon />,
   },
 ];
@@ -166,13 +163,12 @@ export default function DefaultLayout({
   children: React.ReactNode;
 }) {
   const router = useDemoRouter("/");
-  const user = useSelector((state: RootState) => state.auth.login.currentUser)
-  console.log(user?.username)
+  const user = useSelector((state: RootState) => state.auth.login.currentUser);
   const [session, setSession] = React.useState<Session | null>({
     user: {
       name: user?.username,
       email: `${user?.username}healthcare@gmail.com`,
-      image: "https://avatars.githubusercontent.com/u/19550456",
+      image: avatar,
     },
   });
   const navigate = useNavigate();
@@ -189,6 +185,7 @@ export default function DefaultLayout({
       },
       signOut: () => {
         persistor.purge();
+        localStorage.removeItem("chosenRole"); 
         navigate("/login");
       },
     };
@@ -202,12 +199,13 @@ export default function DefaultLayout({
       router={router}
       theme={demoTheme}
       branding={{
-        //logo: <img src="https://mui.com/static/logo.png" alt="MUI logo" />,
-        title: "Healthcare Clinic",
+        logo: <img src={logo} alt="Healthcare SG" />,
+        title: "Healthcare SG",
         //homeUrl: '/toolpad/core/introduction',
       }}
     >
       <div className="bg-[#2e37a40d]">
+        <RoleModal user={user}/>
         <DashboardLayout>
           <PageContainer>
             {children || (

@@ -6,10 +6,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
-// text field
 import TextField from "@mui/material/TextField";
 import BasicDatePicker from "@/components/layouts/components/DatePicker";
-
+import { useState, useEffect } from "react";
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -24,55 +23,14 @@ import {
   GridRowEditStopReasons,
   GridSlotProps,
 } from "@mui/x-data-grid";
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomId,
-  randomArrayItem,
-} from "@mui/x-data-grid-generator";
-
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
-
-const initialRows: GridRowsProp = [
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 25,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 36,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 19,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 28,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 23,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-];
+import { randomId } from "@mui/x-data-grid-generator";
+import { useLocation } from "react-router-dom";
+import { Disease, ExaminationDetail, Patient } from "@/types";
+import { getAllDiseases } from "@/api/apiDisease";
+import { MenuItem } from "@mui/material";
+import { getAllDrugs } from "@/api/apiDrug";
+import { Drug } from "@/types/drug";
+import { updateExam, updateRecordExam } from "@/api/apiExam";
 
 declare module "@mui/x-data-grid" {
   interface ToolbarPropsOverrides {
@@ -90,11 +48,11 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
     const id = randomId();
     setRows((oldRows) => [
       ...oldRows,
-      { id, name: "", age: "", role: "", isNew: true },
+      { id, drugId: null, quantity: 0, note: "", isNew: true, drugs: null },
     ]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+      [id]: { mode: GridRowModes.Edit, fieldToFocus: "drugName" },
     }));
   };
 
@@ -111,11 +69,38 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 }
 
 export default function PatientRecords() {
-  const [rows, setRows] = React.useState(initialRows);
+  const [rows, setRows] = React.useState<GridRowsProp>([]);
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
   );
+  const location = useLocation();
+  const [patient, setPatient] = useState<Patient | null>(() => {
+    return location.state?.patient;
+  });
+  const [drugs, setDrugs] = useState<Drug[] | null>([]);
+  const [diseases, setDiseases] = useState<Disease[] | null>([]);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState("");
+  const [selectedSymptom, setSelectedSymptom] = useState("");
 
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const fetchDiseases = await getAllDiseases();
+        setDiseases(fetchDiseases?.data);
+        const fetchDrug = await getAllDrugs();
+        setDrugs(fetchDrug?.data);
+        console.log(fetchDrug.data);
+      } catch (err: any) {
+        console.error("Fetch API failed:");
+        if (err.name === "TypeError") {
+          console.error("Network error or CORS issue:", err.message);
+        } else {
+          console.error("Unexpected error:", err.message || err);
+        }
+      }
+    };
+    fetchPatients();
+  }, []);
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
     event
@@ -124,7 +109,6 @@ export default function PatientRecords() {
       event.defaultMuiPrevented = true;
     }
   };
-
   const handleEditClick = (id: GridRowId) => () => {
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
   };
@@ -150,8 +134,15 @@ export default function PatientRecords() {
   };
 
   const processRowUpdate = (newRow: GridRowModel) => {
-    const updatedRow = { ...newRow, isNew: false };
+    const selectedDrug = drugs?.find((drug) => drug.drugId === newRow.drugId);
+    const updatedRow: ExaminationDetail = {
+      ...(newRow as ExaminationDetail),
+      isNew: false,
+      drugs: selectedDrug!,
+    };
+
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+
     return updatedRow;
   };
 
@@ -159,37 +150,72 @@ export default function PatientRecords() {
     setRowModesModel(newRowModesModel);
   };
 
+  const handleSaveRecord = async () => {
+       const res = await updateRecordExam(1, rows);
+       console.log(res);
+      console.log("rows: ",rows)
+
+    // try {
+    //   const res = await updateExam(1, selectedSymptom, selectedDiagnosis);
+    //   console.log(res);
+    //   return res;
+    // } catch (error: unknown) {
+    //   if (error instanceof Error) {
+    //     return "Request Err: " + error.message;
+    //   } else {
+    //     return "Error: " + error;
+    //   }
+    // }
+  };
+
   const columns: GridColDef[] = [
-    { field: "name", headerName: "Name", width: 180, editable: true },
     {
-      field: "age",
-      headerName: "Age",
-      type: "number",
-      width: 80,
+      field: "drugId",
+      headerName: "Thuốc",
+      width: 240,
+      editable: true,
+      valueOptions: drugs?.map((drug) => ({
+        label: drug.drugName,
+        value: drug.drugId,
+      })),
+      type: "singleSelect",
+      valueGetter: (value) => {
+        return value || "";
+      },
+    },
+    {
+      field: "unitName",
+      headerName: "Đơn vị",
+      type: "string",
+      width: 100,
       align: "left",
       headerAlign: "left",
+      editable: false,
+      valueGetter: (params, row) => {
+        return row.drugs?.drugsUnit?.unitName || "Chưa có";
+      },
+    },
+    {
+      field: "quantity",
+      headerName: "Số lượng",
+      type: "number",
+      align: "left",
+      headerAlign: "left",
+      width: 100,
       editable: true,
     },
     {
-      field: "joinDate",
-      headerName: "Join date",
-      type: "date",
-      width: 180,
+      field: "note",
+      headerName: "Cách dùng",
+      width: 240,
       editable: true,
-    },
-    {
-      field: "role",
-      headerName: "Department",
-      width: 220,
-      editable: true,
-      type: "singleSelect",
-      valueOptions: ["Market", "Finance", "Development"],
+      type: "string",
     },
     {
       field: "actions",
       type: "actions",
       headerName: "Actions",
-      width: 100,
+      width: 120,
       cellClassName: "actions",
       getActions: ({ id }) => {
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
@@ -235,13 +261,22 @@ export default function PatientRecords() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <h1 className="text-2xl font-bold p-2">Lập phiếu khám</h1>
+      <div className="flex justify-between w-full">
+        <h1 className="text-2xl font-bold p-2 ">Lập phiếu khám</h1>
+        <div className="mx-6 my-2">
+          <Button variant="contained" onClick={handleSaveRecord}>
+            Lưu kết quả
+          </Button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-5 pb-4">
         <TextField
           id="outlined-basic"
           label="Họ tên"
           variant="outlined"
           size="medium"
+          value={patient?.fullName}
           sx={{
             "& .MuiInputLabel-root": {
               top: 10,
@@ -253,17 +288,28 @@ export default function PatientRecords() {
         />
         <BasicDatePicker />
         <TextField
-          id="outlined-basic"
+          id="symptom"
           label="Triệu chứng"
           variant="outlined"
           size="medium"
+          value={selectedSymptom}
+          onChange={(e) => setSelectedSymptom(e.target.value)}
         />
         <TextField
-          id="outlined-basic"
+          id="diagnosis"
           label="Chẩn đoán"
           variant="outlined"
           size="medium"
-        />
+          select
+          onChange={(e) => setSelectedDiagnosis(e.target.value)}
+          value={selectedDiagnosis}
+        >
+          {diseases?.map((value, index) => (
+            <MenuItem key={index} value={value.diseaseId}>
+              {value.diseaseName}
+            </MenuItem>
+          ))}
+        </TextField>
       </div>
       <Box
         sx={{

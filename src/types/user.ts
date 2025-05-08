@@ -3,3 +3,10 @@ export interface User {
     available_roles: string[],
     accessToken: string
 }
+
+export interface UserPermission {
+    accessToken: string,
+    refreshToken: string,
+    selected_role: string,
+    permissionList: string[],
+}

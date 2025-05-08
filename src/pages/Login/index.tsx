@@ -5,7 +5,6 @@ import { TextField } from "@mui/material";
 import Button from "@mui/material/Button";
 import { adminLogin } from "@/api/apiAdmin";
 import { AxiosResponse } from "axios";
-import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 export interface LoginResponse {
@@ -27,25 +26,9 @@ const Login = () => {
     try {
       const res: AxiosResponse<LoginResponse> | string | number =
         await adminLogin(email, password, dispatch, navaite);
-
-      if (typeof res === "object" && "data" in res) {
-        if (res.statusCode === 200) {
-          toast.success("Đăng nhập thành công!", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-        }
-      } else {
-        toast.error("Lỗi đăng nhập! Không nhận được phản hồi đúng.");
-      }
-    } catch (error) {
-      toast.error("Đăng nhập thất bại!");
-      console.error("Login error:", error);
+      return res;
+    } catch (error: any) {
+      console.error("Error during login:", error);
     }
   };
 

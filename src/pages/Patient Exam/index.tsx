@@ -7,6 +7,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
+import AssignmentAddIcon from "@mui/icons-material/AssignmentAdd";
+
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -35,6 +37,8 @@ import {
 } from "@/api/apiPatients";
 import { Patient } from "@/types";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import BasicDatePicker from "@/components/layouts/components/DatePicker";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -131,6 +135,7 @@ export default function PatientExam() {
     {}
   );
   const [id, setId] = useState<number>(1);
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -241,7 +246,7 @@ export default function PatientExam() {
       });
       throw new Error("Invalid phone number");
     }
-    const updatedRow : Patient = { ...(newRow as Patient), isNew: false };
+    const updatedRow: Patient = { ...(newRow as Patient), isNew: false };
     try {
       if (newRow.isNew) {
         const res = await initialPatient(updatedRow as Patient);
@@ -284,9 +289,13 @@ export default function PatientExam() {
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
-
+  const handleExaminate = (id: GridRowId) => {
+    const patient = rows.find((row) => row.id === id);
+    console.log(patient);
+    navigate("/records", { state: { patient } });
+  };
   const columns: GridColDef[] = [
-    { field: "fullName", headerName: "Họ và tên", width: 180, editable: true },
+    { field: "fullName", headerName: "Họ và tên", width: 160, editable: true },
     {
       field: "gender",
       headerName: "Giới tính",
@@ -295,10 +304,18 @@ export default function PatientExam() {
       headerAlign: "left",
       editable: true,
       type: "singleSelect",
-      valueOptions: ["Nam", "Nữ", "Chưa khởi tạo"],
-      valueGetter: (value: boolean) => {
-        if (!value) return "Chưa khởi tạo";
-        else return value ? "Nam" : "Nữ";
+      valueOptions: [
+        {
+          value: true,
+          label: "Nam",
+        },
+        {
+          value: false,
+          label: "Nữ",
+        },
+      ],
+      valueGetter: (param, row) => {
+        return row.gender;
       },
     },
     {
@@ -333,7 +350,7 @@ export default function PatientExam() {
       field: "actions",
       type: "actions",
       headerName: "Actions",
-      width: 100,
+      width: 160,
       cellClassName: "actions",
       getActions: ({ id }) => {
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
@@ -372,6 +389,12 @@ export default function PatientExam() {
             onClick={handleDeleteClick(id)}
             color="inherit"
           />,
+          <GridActionsCellItem
+            icon={<AssignmentAddIcon />}
+            label="Khám bệnh"
+            onClick={() => handleExaminate(id)}
+            color="inherit"
+          />,
         ];
       },
     },
@@ -379,35 +402,40 @@ export default function PatientExam() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <Box
-        sx={{
-          height: 500,
-          width: "100%",
-          "& .actions": {
-            color: "text.secondary",
-          },
-          "& .textPrimary": {
-            color: "text.primary",
-          },
-        }}
-      >
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          editMode="row"
-          rowModesModel={rowModesModel}
-          onRowModesModelChange={handleRowModesModelChange}
-          onRowEditStop={handleRowEditStop}
-          processRowUpdate={processRowUpdate}
-          slots={{ toolbar: EditToolbar }}
-          slotProps={{
-            toolbar: { setRows, setRowModesModel },
+      <div className="flex pb-4">
+        <BasicDatePicker />
+      </div>
+      <div>
+        <Box
+          sx={{
+            height: 500,
+            width: "100%",
+            "& .actions": {
+              color: "text.secondary",
+            },
+            "& .textPrimary": {
+              color: "text.primary",
+            },
           }}
-          onProcessRowUpdateError={(error) => {
-            console.error("Row update error:", error);
-          }}
-        />
-      </Box>
+        >
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            editMode="row"
+            rowModesModel={rowModesModel}
+            onRowModesModelChange={handleRowModesModelChange}
+            onRowEditStop={handleRowEditStop}
+            processRowUpdate={processRowUpdate}
+            slots={{ toolbar: EditToolbar }}
+            slotProps={{
+              toolbar: { setRows, setRowModesModel },
+            }}
+            onProcessRowUpdateError={(error) => {
+              console.error("Row update error:", error);
+            }}
+          />
+        </Box>
+      </div>
     </div>
   );
 }

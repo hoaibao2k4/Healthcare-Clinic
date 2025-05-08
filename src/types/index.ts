@@ -1,3 +1,5 @@
 export * from './patient'
 export * from './disease'
 export * from './user'
+export * from './report'
+export * from './record'

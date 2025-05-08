@@ -2,18 +2,20 @@ import { configureStore } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import authReducer from './authSlice';
+import permissionReducer from './permissionSlice';
 import { combineReducers } from 'redux';
 
 // Kết hợp các reducers
 const rootReducer = combineReducers({
   auth: authReducer,
+  permission: permissionReducer,
 });
 
 // Cấu hình redux-persist
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth']
+  whitelist: ['auth'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
