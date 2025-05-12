@@ -7,6 +7,7 @@ import DrugUsagePage from "@/pages/DrugUsage";
 import InvoicePage from "@/pages/Invoice";
 import LoginPage from "@/pages/Login";
 import PatientExam from "@/pages/Patient Exam";
+import PatientWaiting from "@/pages/Patient Waiting";
 import PatientList from "@/pages/Patients";
 import PatientRecords from "@/pages/Records";
 import RevenuePage from "@/pages/Revenue";
@@ -25,6 +26,7 @@ const publicRoutes = [
     {path: '/invoice', component: InvoicePage, layout: DefaultLayout},
     {path: '/reports/revenue', component: RevenuePage, layout: DefaultLayout},
     {path: '/reports/drug-usage', component: DrugUsagePage, layout: DefaultLayout},
+    {path: '/waiting', component: PatientWaiting, layout: DefaultLayout},
 
 
 

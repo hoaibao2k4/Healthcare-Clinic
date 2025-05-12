@@ -146,7 +146,6 @@ export default function DrugsPage() {
           id: id + index,
         }));
         setRows(dataWithId);
-        console.log(dataWithId);
         setId(id + res.data.length);
       } catch (err: any) {
         console.error("Fetch API failed:");
@@ -222,12 +221,13 @@ export default function DrugsPage() {
     const updatedRows: Drug = {
       ...(newRow as Drug),
       isNew: false,
+      expirationDate: (newRow.expirationDate as Date).toISOString().split('T')[0]
     };
-    const drugUnit = drugUnitApi.data[updatedRows.unitId! - 1]
-    console.log(drugUnit)
+    const drugUnit = drugUnitApi.data[updatedRows.unitId! - 1];
+    console.log(drugUnit);
     const updatedRow = {
       ...updatedRows,
-      drugsUnit: drugUnit
+      drugsUnit: drugUnit,
     };
     console.log("updatedRow", updatedRow);
     try {
@@ -304,9 +304,12 @@ export default function DrugsPage() {
     {
       field: "expirationDate",
       headerName: "Ngày hết hạn",
-      type: "string",
+      type: "date",
       width: 150,
       editable: true,
+      valueGetter: (param, row) => {
+        return new Date(row.expirationDate);
+      },
     },
     {
       field: "unitId",

@@ -20,15 +20,40 @@ import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import { useSelector } from "react-redux";
 import { persistor, RootState } from "@/redux/store";
 import RoleModal from "../components/Modal";
-import PriceChangeIcon from '@mui/icons-material/PriceChange';
-import PaidIcon from '@mui/icons-material/Paid';
-import MedicationIcon from '@mui/icons-material/Medication';
-import logo from '@/assets/icons/v987-18a-removebg-preview.png'
-import avatar from '@/assets/images/doctorAvatar.jpg'
-import MedicationLiquidIcon from '@mui/icons-material/MedicationLiquid';
-import VaccinesIcon from '@mui/icons-material/Vaccines';
-import SanitizerIcon from '@mui/icons-material/Sanitizer';
-const NAVIGATION: Navigation = [
+import PriceChangeIcon from "@mui/icons-material/PriceChange";
+import PaidIcon from "@mui/icons-material/Paid";
+import MedicationIcon from "@mui/icons-material/Medication";
+import logo from "@/assets/icons/v987-18a-removebg-preview.png";
+import avatar from "@/assets/images/doctorAvatar.jpg";
+import MedicationLiquidIcon from "@mui/icons-material/MedicationLiquid";
+import VaccinesIcon from "@mui/icons-material/Vaccines";
+import SanitizerIcon from "@mui/icons-material/Sanitizer";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+
+type NavigationPageWithPermission = {
+  kind?: "page";
+  segment: string;
+  title: string;
+  icon?: React.ReactNode;
+  permissions?: string[];
+  children?: NavigationPageWithPermission[];
+};
+
+type NavigationHeaderWithPermission = {
+  kind: "header";
+  title: string;
+};
+
+type NavigationDividerWithPermission = {
+  kind: "divider";
+};
+
+type NavigationItemWithPermission =
+  | NavigationPageWithPermission
+  | NavigationHeaderWithPermission
+  | NavigationDividerWithPermission;
+
+const NAVIGATION: NavigationItemWithPermission[] = [
   {
     kind: "header",
     title: "Main items",
@@ -37,48 +62,69 @@ const NAVIGATION: Navigation = [
     segment: "dashboard",
     title: "Bảng điều khiển",
     icon: <DashboardIcon />,
+    permissions: ["ACCESS_DASHBOARD"],
+  },
+  {
+    segment: "staff",
+    title: "Quản lí nhân sự",
+    icon: <PeopleAltIcon />,
+    permissions: ["ADMIN"],
   },
   {
     segment: "exams",
     title: "Danh sách khám bệnh",
     icon: <FeaturedPlayListIcon />,
+    permissions: ["SUPPORTER", "ADMIN"],
+  },
+  {
+    segment: "waiting",
+    title: "Danh sách khám bệnh",
+    icon: <FeaturedPlayListIcon />,
+    permissions: ["DOCTOR"],
   },
   {
     segment: "records",
     title: "Phiếu khám bệnh",
     icon: <QueuePlayNextIcon />,
+    permissions: ["DOCTOR"],
   },
   {
     segment: "patients",
     title: "Danh sách bệnh nhân",
     icon: <AccountBoxIcon />,
+    permissions: ["DOCTOR"],
   },
   {
     segment: "drugs",
     title: "Quản lí thuốc",
     icon: <MedicationLiquidIcon />,
+    permissions: ["ADMIN"],
     children: [
       {
         segment: "drugs-unit",
         title: "Đơn vị thuốc",
         icon: <VaccinesIcon />,
+        permissions: ["ADMIN"],
       },
       {
         segment: "disease",
         title: "Danh sách bệnh",
         icon: <DescriptionIcon />,
+        permissions: ["ADMIN"],
       },
       {
         segment: "drugs-type",
         title: "Loại thuốc",
         icon: <SanitizerIcon />,
+        permissions: ["ADMIN"],
       },
     ],
   },
   {
     segment: "invoice",
-    title: "Hóa đơn",
-    icon: <PriceChangeIcon/>
+    title: "Quản lí hóa đơn",
+    icon: <PriceChangeIcon />,
+    permissions: ["DOCTOR", "ADMIN"],
   },
   {
     kind: "divider",
@@ -91,16 +137,19 @@ const NAVIGATION: Navigation = [
     segment: "reports",
     title: "Báo cáo",
     icon: <BarChartIcon />,
+    permissions: ["ADMIN"],
     children: [
       {
         segment: "revenue",
         title: "Doanh thu",
         icon: <PaidIcon />,
+        permissions: ["ADMIN"],
       },
       {
         segment: "drug-usage",
         title: "Sử dụng thuốc",
         icon: <MedicationIcon />,
+        permissions: ["ADMIN"],
       },
     ],
   },
@@ -108,8 +157,36 @@ const NAVIGATION: Navigation = [
     segment: "integrations",
     title: "Cài đặt",
     icon: <LayersIcon />,
+    permissions: ["ADMIN"],
   },
 ];
+
+function filterNavigationByPermission(
+  items: NavigationItemWithPermission[],
+  userPermissions: string[]
+): Navigation {
+  return items
+    .map((item) => {
+      if (item.kind === "header" || item.kind === "divider") return item;
+
+      // Nếu có permission yêu cầu mà user không có -> loại
+      if (
+        item.permissions &&
+        !item.permissions.some((p) => userPermissions.includes(p))
+      ) {
+        return null;
+      }
+      if (!item.permissions) return null;
+
+      const children = item.children
+        ? filterNavigationByPermission(item.children, userPermissions)
+        : undefined;
+
+      const { permissions, ...rest } = item;
+      return { ...rest, ...(children ? { children } : {}) };
+    })
+    .filter(Boolean) as Navigation;
+}
 
 const demoTheme = createTheme({
   colorSchemes: { light: true, dark: true },
@@ -164,6 +241,9 @@ export default function DefaultLayout({
 }) {
   const router = useDemoRouter("/");
   const user = useSelector((state: RootState) => state.auth.login.currentUser);
+  const permission = useSelector(
+    (state: RootState) => state.permission.login.currentUser
+  );
   const [session, setSession] = React.useState<Session | null>({
     user: {
       name: user?.username,
@@ -185,17 +265,22 @@ export default function DefaultLayout({
       },
       signOut: () => {
         persistor.purge();
-        localStorage.removeItem("chosenRole"); 
+        localStorage.removeItem("chosenRole");
         navigate("/login");
       },
     };
   }, [user]);
   //
+  const navigation = filterNavigationByPermission(NAVIGATION, [
+    "ADMIN",
+    "ACCESS_DASHBOARD",
+  ]);
+
   return (
     <AppProvider
       session={session}
       authentication={authentication}
-      navigation={NAVIGATION}
+      navigation={navigation}
       router={router}
       theme={demoTheme}
       branding={{
@@ -205,7 +290,7 @@ export default function DefaultLayout({
       }}
     >
       <div className="bg-[#2e37a40d]">
-        <RoleModal user={user}/>
+        <RoleModal user={user} />
         <DashboardLayout>
           <PageContainer>
             {children || (

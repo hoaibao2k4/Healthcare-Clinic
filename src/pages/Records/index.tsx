@@ -31,6 +31,7 @@ import { MenuItem } from "@mui/material";
 import { getAllDrugs } from "@/api/apiDrug";
 import { Drug } from "@/types/drug";
 import { updateExam, updateRecordExam } from "@/api/apiExam";
+import { toast } from "react-toastify";
 
 declare module "@mui/x-data-grid" {
   interface ToolbarPropsOverrides {
@@ -89,7 +90,6 @@ export default function PatientRecords() {
         setDiseases(fetchDiseases?.data);
         const fetchDrug = await getAllDrugs();
         setDrugs(fetchDrug?.data);
-        console.log(fetchDrug.data);
       } catch (err: any) {
         console.error("Fetch API failed:");
         if (err.name === "TypeError") {
@@ -142,6 +142,15 @@ export default function PatientRecords() {
     };
 
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+    toast.success("Thêm thuốc thành công", {
+      position: "bottom-right",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
 
     return updatedRow;
   };
@@ -151,21 +160,66 @@ export default function PatientRecords() {
   };
 
   const handleSaveRecord = async () => {
-       const res = await updateRecordExam(1, rows);
-       console.log(res);
-      console.log("rows: ",rows)
-
-    // try {
-    //   const res = await updateExam(1, selectedSymptom, selectedDiagnosis);
-    //   console.log(res);
-    //   return res;
-    // } catch (error: unknown) {
-    //   if (error instanceof Error) {
-    //     return "Request Err: " + error.message;
-    //   } else {
-    //     return "Error: " + error;
-    //   }
-    // }
+    if (!(rows && selectedDiagnosis && selectedSymptom)) {
+      toast.error("Bác sĩ chưa khám cho bệnh nhân", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    } else if (rows.length < 1) {
+      toast.error("Bác sĩ chưa kê đơn thuốc", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    } else if (!selectedSymptom || !selectedDiagnosis) {
+      toast.error("Bác sĩ chưa chẩn đoán bệnh", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    } else if (patient?.examId) {
+      try {
+        const res = await updateExam(
+          patient.examId,
+          selectedSymptom,
+          selectedDiagnosis
+        );
+        const resRecord = await updateRecordExam(patient?.examId, rows);
+        console.log("res: ", res);
+        console.log("res cord: ", resRecord);
+        if (res && resRecord) {
+          toast.success("Thêm thông tin thành công", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+        }
+        return res;
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          return "Request Err: " + error.message;
+        } else {
+          return "Error: " + error;
+        }
+      }
+    }
   };
 
   const columns: GridColDef[] = [

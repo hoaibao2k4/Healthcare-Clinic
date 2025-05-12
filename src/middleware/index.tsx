@@ -9,9 +9,11 @@ interface PrivateRouterProps {
 
 export default function PrivateRouter({ children }: PrivateRouterProps) {
   const user = useSelector((state: RootState) => state.auth.login.currentUser);
-
+  const permission = useSelector(
+    (state: RootState) => state.permission.login.currentUser
+  );
   if (!user) {
-    return <Navigate to="/login" />;
+    if (!permission) return <Navigate to="/login" />;
   }
 
   return children;

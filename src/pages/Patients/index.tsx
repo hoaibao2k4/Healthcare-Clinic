@@ -1,11 +1,15 @@
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/DeleteOutlined';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Close';
+import * as React from "react";
+import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/DeleteOutlined";
+import SaveIcon from "@mui/icons-material/Save";
+import CancelIcon from "@mui/icons-material/Close";
+import AssignmentAddIcon from "@mui/icons-material/AssignmentAdd";
+import dayjs, { Dayjs } from "dayjs";
+
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -19,15 +23,26 @@ import {
   GridRowModel,
   GridRowEditStopReasons,
   GridSlotProps,
-} from '@mui/x-data-grid';
+} from "@mui/x-data-grid";
 import {
   randomCreatedDate,
   randomTraderName,
   randomId,
   randomArrayItem,
-} from '@mui/x-data-grid-generator';
-
-const roles = ['Market', 'Finance', 'Development'];
+} from "@mui/x-data-grid-generator";
+import {
+  deletePatient,
+  getAllPatients,
+  getPatientsDiagnosis,
+  initialPatient,
+  updatePatient,
+} from "@/api/apiPatients";
+import { Patient } from "@/types";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import BasicDatePicker from "@/components/layouts/components/DatePicker";
+////////////
+const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
   return randomArrayItem(roles);
 };
@@ -70,44 +85,91 @@ const initialRows: GridRowsProp = [
   },
 ];
 
-declare module '@mui/x-data-grid' {
+declare module "@mui/x-data-grid" {
   interface ToolbarPropsOverrides {
     setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
     setRowModesModel: (
-      newModel: (oldModel: GridRowModesModel) => GridRowModesModel,
+      newModel: (oldModel: GridRowModesModel) => GridRowModesModel
     ) => void;
   }
 }
+////////////
 
-function EditToolbar(props: GridSlotProps['toolbar']) {
+function EditToolbar(props: GridSlotProps["toolbar"]) {
   const { setRows, setRowModesModel } = props;
 
   const handleClick = () => {
-    const id = randomId();
+    const id = Math.floor(Math.random() * 100);
     setRows((oldRows) => [
       ...oldRows,
-      { id, name: '', age: '', role: '', isNew: true },
+      {
+        id,
+        fullName: "",
+        gender: "",
+        yearOfBirth: "",
+        address: "",
+        phoneNumber: "",
+        residentalIdentity: "",
+        isNew: true,
+      },
     ]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
+      [id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
     }));
   };
 
   return (
     <GridToolbarContainer>
-      <Button color="primary" startIcon={<AddIcon />} size='large' onClick={handleClick}>
-        
-      </Button>
+      {/* <Button
+        color="primary"
+        startIcon={<AddIcon />}
+        size="large"
+        onClick={handleClick}
+      ></Button> */}
     </GridToolbarContainer>
   );
 }
 
 export default function PatientList() {
   const [rows, setRows] = React.useState(initialRows);
-  const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>({});
+  const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
+    {}
+  );
+  const [id, setId] = useState<number>(1);
+  const [selectedDate, setSelectedDate] = useState<Dayjs | null>(dayjs());
 
-  const handleRowEditStop: GridEventListener<'rowEditStop'> = (params, event) => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        if (selectedDate) {
+          const res = await getPatientsDiagnosis(
+            selectedDate?.format("YYYY-MM-DD")
+          );
+          const dataWithId = res.data.map((item: Patient, index: number) => ({
+            ...item,
+            id: id + index,
+          }));
+          setRows(dataWithId);
+          setId(id + res.data.length);
+        }
+      } catch (err: any) {
+        console.error("Fetch API failed:");
+        if (err.name === "TypeError") {
+          console.error("Network error or CORS issue:", err.message);
+        } else {
+          console.error("Unexpected error:", err.message || err);
+        }
+      }
+    };
+    fetchPatients();
+  }, [selectedDate]);
+  // console.log(rows);
+  const handleRowEditStop: GridEventListener<"rowEditStop"> = (
+    params,
+    event
+  ) => {
     if (params.reason === GridRowEditStopReasons.rowFocusOut) {
       event.defaultMuiPrevented = true;
     }
@@ -121,8 +183,33 @@ export default function PatientList() {
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
   };
 
-  const handleDeleteClick = (id: GridRowId) => () => {
-    setRows(rows.filter((row) => row.id !== id));
+  const handleDeleteClick = (id: GridRowId) => {
+    return async () => {
+      setRows(rows.filter((row) => row.id !== id));
+      const patientId = rows.find((row) => row.id === id)?.patientId;
+      console.log("patientId", patientId);
+      try {
+        const res = await deletePatient(patientId);
+        if (res) {
+          toast.success("Xóa bệnh nhân thành công", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+        }
+      } catch (err: any) {
+        console.error("API request failed:", err);
+        if (err.name === "TypeError") {
+          console.error("Network error or CORS issue:", err.message);
+        } else {
+          console.error("Unexpected error:", err.message || err);
+        }
+      }
+    };
   };
 
   const handleCancelClick = (id: GridRowId) => () => {
@@ -136,9 +223,73 @@ export default function PatientList() {
       setRows(rows.filter((row) => row.id !== id));
     }
   };
-
-  const processRowUpdate = (newRow: GridRowModel) => {
-    const updatedRow = { ...newRow, isNew: false };
+  const checkIdentity = (identity: string) => {
+    const regex = /^\d{12}$/;
+    return regex.test(identity);
+  };
+  const chekckPhoneNumber = (phoneNumber: string) => {
+    return /^0\d{9}$/.test(phoneNumber);
+  };
+  const processRowUpdate = async (newRow: GridRowModel) => {
+    if (!checkIdentity(newRow?.residentalIdentity)) {
+      toast.error("CMND/CCCD không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid CCCD");
+    } else if (!chekckPhoneNumber(newRow?.phoneNumber)) {
+      toast.error("Số điện thoại không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid phone number");
+    }
+    const updatedRow: Patient = { ...(newRow as Patient), isNew: false };
+    try {
+      if (newRow.isNew) {
+        const res = await initialPatient(updatedRow as Patient);
+        updatedRow.patientId = res.patientId;
+        if (res)
+          toast.success("Thêm bệnh nhân thành công", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+      } else {
+        const res = await updatePatient(updatedRow as Patient);
+        if (res)
+          toast.success("Cập nhật bệnh nhân thành công", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+      }
+    } catch (err: any) {
+      console.error("API request failed:", err);
+      if (err.name === "TypeError") {
+        console.error("Network error or CORS issue:", err.message);
+      } else {
+        console.error("Unexpected error:", err.message || err);
+      }
+    }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
     return updatedRow;
   };
@@ -146,109 +297,124 @@ export default function PatientList() {
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
-
+  const handleExaminate = (id: GridRowId) => {
+    const patient = rows.find((row) => row.id === id);
+    console.log(patient);
+    navigate("/records", { state: { patient } });
+  };
   const columns: GridColDef[] = [
-    { field: 'name', headerName: 'Name', width: 180, editable: true },
+    { field: "fullName", headerName: "Họ và tên", width: 200, editable: true },
     {
-      field: 'age',
-      headerName: 'Age',
-      type: 'number',
-      width: 80,
-      align: 'left',
-      headerAlign: 'left',
+      field: "examinationDate",
+      headerName: "Ngày khám",
+      type: "string",
+      width: 160,
       editable: true,
     },
     {
-      field: 'joinDate',
-      headerName: 'Join date',
-      type: 'date',
-      width: 180,
+      field: "nameDisease",
+      headerName: "Chẩn đoán",
+      width: 160,
       editable: true,
+      type: "string",
     },
     {
-      field: 'role',
-      headerName: 'Department',
-      width: 220,
+      field: "symptoms",
+      headerName: "Triệu chứng",
+      width: 160,
       editable: true,
-      type: 'singleSelect',
-      valueOptions: ['Market', 'Finance', 'Development'],
+      type: "string",
     },
-    {
-      field: 'actions',
-      type: 'actions',
-      headerName: 'Actions',
-      width: 100,
-      cellClassName: 'actions',
-      getActions: ({ id }) => {
-        const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
+    // {
+    //   field: "actions",
+    //   type: "actions",
+    //   headerName: "Actions",
+    //   width: 160,
+    //   cellClassName: "actions",
+    //   getActions: ({ id }) => {
+    //     const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
-        if (isInEditMode) {
-          return [
-            <GridActionsCellItem
-              icon={<SaveIcon />}
-              label="Save"
-              sx={{
-                color: 'primary.main',
-              }}
-              onClick={handleSaveClick(id)}
-            />,
-            <GridActionsCellItem
-              icon={<CancelIcon />}
-              label="Cancel"
-              className="textPrimary"
-              onClick={handleCancelClick(id)}
-              color="inherit"
-            />,
-          ];
-        }
+    //     if (isInEditMode) {
+    //       return [
+    //         <GridActionsCellItem
+    //           icon={<SaveIcon />}
+    //           label="Save"
+    //           sx={{
+    //             color: "primary.main",
+    //           }}
+    //           onClick={handleSaveClick(id)}
+    //         />,
+    //         <GridActionsCellItem
+    //           icon={<CancelIcon />}
+    //           label="Cancel"
+    //           className="textPrimary"
+    //           onClick={handleCancelClick(id)}
+    //           color="inherit"
+    //         />,
+    //       ];
+    //     }
 
-        return [
-          <GridActionsCellItem
-            icon={<EditIcon />}
-            label="Edit"
-            className="textPrimary"
-            onClick={handleEditClick(id)}
-            color="inherit"
-          />,
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={handleDeleteClick(id)}
-            color="inherit"
-          />,
-        ];
-      },
-    },
+    //     return [
+    //       <GridActionsCellItem
+    //         icon={<EditIcon />}
+    //         label="Edit"
+    //         className="textPrimary"
+    //         onClick={handleEditClick(id)}
+    //         color="inherit"
+    //       />,
+    //       <GridActionsCellItem
+    //         icon={<DeleteIcon />}
+    //         label="Delete"
+    //         onClick={handleDeleteClick(id)}
+    //         color="inherit"
+    //       />,
+    //       <GridActionsCellItem
+    //         icon={<AssignmentAddIcon />}
+    //         label="Khám bệnh"
+    //         onClick={() => handleExaminate(id)}
+    //         color="inherit"
+    //       />,
+    //     ];
+    //   },
+    // },
   ];
 
   return (
-<div className='bg-white p-4 rounded-2xl'>
-      <Box
-        sx={{
-          height: 500,
-          width: '100%',
-          '& .actions': {
-            color: 'text.secondary',
-          },
-          '& .textPrimary': {
-            color: 'text.primary',
-          },
-        }}
-      >
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          editMode="row"
-          rowModesModel={rowModesModel}
-          onRowModesModelChange={handleRowModesModelChange}
-          onRowEditStop={handleRowEditStop}
-          processRowUpdate={processRowUpdate}
-          slots={{ toolbar: EditToolbar }}
-          slotProps={{
-            toolbar: { setRows, setRowModesModel },
+    <div className="bg-white p-4 rounded-2xl">
+      <div className="flex pb-4">
+        <BasicDatePicker value={selectedDate} onChange={setSelectedDate}/>
+      </div>
+      <div>
+        <Box
+          sx={{
+            height: 500,
+            width: "100%",
+            "& .actions": {
+              color: "text.secondary",
+            },
+            "& .textPrimary": {
+              color: "text.primary",
+            },
           }}
-        />
-      </Box>
-</div>
+        >
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            editMode="row"
+            rowModesModel={rowModesModel}
+            onRowModesModelChange={handleRowModesModelChange}
+            onRowEditStop={handleRowEditStop}
+            processRowUpdate={processRowUpdate}
+            slots={{ toolbar: EditToolbar }}
+            slotProps={{
+              toolbar: { setRows, setRowModesModel },
+            }}
+            onProcessRowUpdateError={(error) => {
+              console.error("Row update error:", error);
+            }}
+          />
+        </Box>
+      </div>
+    </div>
   );
 }

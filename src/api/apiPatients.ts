@@ -112,3 +112,40 @@ export const deletePatient = async (patientId: string) => {
   }
 };
 
+export const getPatientsWaiting = async (examinationDate : string) => {
+  try {
+    const res = await response.get(`/api/public/examination/waiting?examinationDate=${examinationDate}`);
+    return res.data;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      console.error(
+        err.response?.data || err.message,
+        err.response?.status || "No status"
+      );
+    } else if (err instanceof Error) {
+      console.error("Request Err: ", err.message);
+    } else {
+      console.error("Unknown: ", err);
+    }
+  }
+};
+
+export const getPatientsDiagnosis = async (examinationDate : string) => {
+  try {
+    const res = await response.get(`/api/public/examination/patients?examinationDate=${examinationDate}`);
+    return res.data;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      console.error(
+        err.response?.data || err.message,
+        err.response?.status || "No status"
+      );
+    } else if (err instanceof Error) {
+      console.error("Request Err: ", err.message);
+    } else {
+      console.error("Unknown: ", err);
+    }
+  }
+};
+
+
