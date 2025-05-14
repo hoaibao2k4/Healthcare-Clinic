@@ -11,7 +11,7 @@ import PatientWaiting from "@/pages/Patient Waiting";
 import PatientList from "@/pages/Patients";
 import PatientRecords from "@/pages/Records";
 import RevenuePage from "@/pages/Revenue";
-
+import SettingsPage from "@/pages/Settings";
 
 const publicRoutes = [
     {path: '/', component: DashBoard, layout: DefaultLayout},
@@ -27,6 +27,7 @@ const publicRoutes = [
     {path: '/reports/revenue', component: RevenuePage, layout: DefaultLayout},
     {path: '/reports/drug-usage', component: DrugUsagePage, layout: DefaultLayout},
     {path: '/waiting', component: PatientWaiting, layout: DefaultLayout},
+    {path: "/integrations",component: SettingsPage,layout: DefaultLayout,},
 
 
 

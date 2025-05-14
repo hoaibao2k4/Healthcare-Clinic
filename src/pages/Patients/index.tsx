@@ -8,6 +8,7 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import AssignmentAddIcon from "@mui/icons-material/AssignmentAdd";
+import SearchIcon from "@mui/icons-material/Search";
 import dayjs, { Dayjs } from "dayjs";
 
 import {
@@ -132,6 +133,7 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 }
 
 export default function PatientList() {
+  const [searchTerm, setSearchTerm] = useState(""); //thêm search
   const [rows, setRows] = React.useState(initialRows);
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
@@ -165,6 +167,18 @@ export default function PatientList() {
     };
     fetchPatients();
   }, [selectedDate]);
+  //Thêm filter chỗ Search Box
+  const filterModel: GridFilterModel = {
+    items: searchTerm
+      ? [
+          {
+            field: "fullName",
+            operator: "contains",
+            value: searchTerm,
+          },
+        ]
+      : [],
+  };
   // console.log(rows);
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
@@ -381,8 +395,51 @@ export default function PatientList() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <div className="flex pb-4">
+      {/* <div className="flex pb-4">
         <BasicDatePicker value={selectedDate} onChange={setSelectedDate}/>
+      </div>
+      <div>
+        <Box
+          sx={{
+            height: 500,
+            width: "100%",
+            "& .actions": {
+              color: "text.secondary",
+            },
+            "& .textPrimary": {
+              color: "text.primary",
+            },
+          }}
+        > */}
+      <div className="flex justify-between items-center pb-4">
+        {/* thêm search box bên trái */}
+        <Box
+          display="flex"
+          alignItems="center"
+          bgcolor="#f4f6f8"
+          borderRadius={2}
+          px={2}
+          py={1}
+          width={300}
+          boxShadow={1}
+        >
+          <SearchIcon sx={{ color: "gray", marginRight: 1 }} />
+          <input
+            placeholder="Tìm kiếm tên bệnh nhân"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              flex: 1,
+              fontSize: "16px",
+            }}
+          />
+        </Box>
+
+        {/*Sửa ngày khám bên phải */}
+        <BasicDatePicker value={selectedDate} onChange={setSelectedDate} />
       </div>
       <div>
         <Box
@@ -400,6 +457,7 @@ export default function PatientList() {
           <DataGrid
             rows={rows}
             columns={columns}
+            filterModel={filterModel}
             editMode="row"
             rowModesModel={rowModesModel}
             onRowModesModelChange={handleRowModesModelChange}
