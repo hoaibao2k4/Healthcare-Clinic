@@ -19,7 +19,7 @@ import QueuePlayNextIcon from "@mui/icons-material/QueuePlayNext";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import { useSelector } from "react-redux";
 import { persistor, RootState } from "@/redux/store";
-import RoleModal from "../components/Modal";
+import RoleModal from "../components/Modal/Roles";
 import PriceChangeIcon from "@mui/icons-material/PriceChange";
 import PaidIcon from "@mui/icons-material/Paid";
 import MedicationIcon from "@mui/icons-material/Medication";
@@ -67,6 +67,26 @@ const NAVIGATION: NavigationItemWithPermission[] = [
   {
     segment: "staff",
     title: "Quản lí nhân sự",
+    icon: <PeopleAltIcon />,
+    permissions: ["ADMIN"],
+    children: [
+      {
+        segment: "supporters",
+        title: "Quản lí nhân viên",
+        icon: <PeopleAltIcon />,
+        permissions: ["ADMIN"],
+      },
+      {
+        segment: "doctors",
+        title: "Quản lí bác sĩ",
+        icon: <PeopleAltIcon />,
+        permissions: ["ADMIN"],
+      },
+    ],
+  },
+  {
+    segment: "permission",
+    title: "Quản lí phân quyền",
     icon: <PeopleAltIcon />,
     permissions: ["ADMIN"],
   },
