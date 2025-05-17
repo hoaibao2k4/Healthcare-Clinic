@@ -7,6 +7,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
+import AssignmentAddIcon from "@mui/icons-material/AssignmentAdd";
+
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -27,12 +29,16 @@ import {
   randomId,
   randomArrayItem,
 } from "@mui/x-data-grid-generator";
+import {
+  deletePatient,
+  getAllPatients,
+  initialPatient,
+  updatePatient,
+} from "@/api/apiPatients";
+import { Patient } from "@/types";
 import { toast } from "react-toastify";
-
-import { deleteDrugUnit, initialDrugUnit, updateDrugUnit } from "@/api/apiDrug";
-import { DrugUnit } from "@/types/drug";
-import { getInvoice } from "@/api/apiBill";
-import { Invoice } from "@/types";
+import { useNavigate } from "react-router-dom";
+import BasicDatePicker from "@/components/layouts/components/DatePicker";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -96,8 +102,12 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
       ...oldRows,
       {
         id,
-        unitName: "",
-        description: "",
+        fullName: "",
+        gender: "",
+        yearOfBirth: "",
+        address: "",
+        phoneNumber: "",
+        residentalIdentity: "",
         isNew: true,
       },
     ]);
@@ -119,17 +129,18 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
   );
 }
 
-export default function InvoicePage() {
+export default function StaffDoctors() {
   const [rows, setRows] = React.useState(initialRows);
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
   );
   const [id, setId] = useState<number>(1);
+  const navigate = useNavigate();
   useEffect(() => {
-    const fetchInvoice = async () => {
+    const fetchPatients = async () => {
       try {
-        const res = await getInvoice();
-        const dataWithId = res?.map((item: Invoice, index: number) => ({
+        const res = await getAllPatients();
+        const dataWithId = res.data.map((item: Patient, index: number) => ({
           ...item,
           id: id + index,
         }));
@@ -144,9 +155,9 @@ export default function InvoicePage() {
         }
       }
     };
-    fetchInvoice();
+    fetchPatients();
   }, []);
-
+  // console.log(rows);
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
     event
@@ -167,12 +178,12 @@ export default function InvoicePage() {
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
       setRows(rows.filter((row) => row.id !== id));
-      const unitId = rows.find((row) => row.id === id)?.unitId;
-      console.log("unitId", unitId);
+      const patientId = rows.find((row) => row.id === id)?.patientId;
+      console.log("patientId", patientId);
       try {
-        const res = await deleteDrugUnit(unitId);
+        const res = await deletePatient(patientId);
         if (res) {
-          toast.success("Xóa thành công", {
+          toast.success("Xóa bệnh nhân thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -204,14 +215,44 @@ export default function InvoicePage() {
       setRows(rows.filter((row) => row.id !== id));
     }
   };
+  const checkIdentity = (identity: string) => {
+    const regex = /^\d{12}$/;
+    return regex.test(identity);
+  };
+  const chekckPhoneNumber = (phoneNumber: string) => {
+    return /^0\d{9}$/.test(phoneNumber);
+  };
   const processRowUpdate = async (newRow: GridRowModel) => {
-    const updatedRow: DrugUnit = { ...(newRow as DrugUnit), isNew: false };
+    if (!checkIdentity(newRow?.residentalIdentity)) {
+      toast.error("CMND/CCCD không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid CCCD");
+    } else if (!chekckPhoneNumber(newRow?.phoneNumber)) {
+      toast.error("Số điện thoại không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid phone number");
+    }
+    const updatedRow: Patient = { ...(newRow as Patient), isNew: false };
     try {
       if (newRow.isNew) {
-        const res = await initialDrugUnit(updatedRow as DrugUnit);
-        updatedRow.unitId = res.unitId;
+        const res = await initialPatient(updatedRow as Patient);
+        updatedRow.patientId = res.patientId;
         if (res)
-          toast.success("Thêm bệnh thành công", {
+          toast.success("Thêm bệnh nhân thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -221,9 +262,9 @@ export default function InvoicePage() {
             progress: undefined,
           });
       } else {
-        const res = await updateDrugUnit(updatedRow as DrugUnit);
+        const res = await updatePatient(updatedRow as Patient);
         if (res)
-          toast.success("Cập nhật bệnh thành công", {
+          toast.success("Cập nhật bệnh nhân thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -248,127 +289,150 @@ export default function InvoicePage() {
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
-
+  const handleExaminate = (id: GridRowId) => {
+    const patient = rows.find((row) => row.id === id);
+    console.log(patient);
+    navigate("/records", { state: { patient } });
+  };
   const columns: GridColDef[] = [
+    { field: "fullName", headerName: "Họ và tên", width: 160, editable: true },
     {
-      field: "fullName",
-      headerName: "Họ và tên",
-      width: 180,
-      editable: false,
-    },
-    {
-      field: "examinationDate",
-      headerName: "Ngày khám",
-      type: "date",
-      width: 180,
-      editable: false,
-      valueGetter: (param, row) => {
-        return new Date(row.examinationDate);
-      },
-    },
-    {
-      field: "examFee",
-      headerName: "Tiền khám",
-      type: "number",
-      width: 140,
-      editable: false,
-    },
-    {
-      field: "drugsFee",
-      headerName: "Tiền thuốc",
-      type: "number",
-      width: 140,
-      editable: false,
-    },
-    {
-      field: "totalFee",
-      headerName: "Tổng tiền",
-      type: "number",
-      width: 140,
+      field: "gender",
+      headerName: "Giới tính",
+      width: 80,
+      align: "left",
+      headerAlign: "left",
       editable: true,
+      type: "singleSelect",
+      valueOptions: [
+        {
+          value: true,
+          label: "Nam",
+        },
+        {
+          value: false,
+          label: "Nữ",
+        },
+      ],
       valueGetter: (param, row) => {
-        return row.examFee + row.drugsFee;
+        return row.gender;
       },
     },
-    // {
-    //   field: "actions",
-    //   type: "actions",
-    //   headerName: "Actions",
-    //   width: 100,
-    //   cellClassName: "actions",
-    //   getActions: ({ id }) => {
-    //     const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
+    {
+      field: "yearOfBirth",
+      headerName: "Năm sinh",
+      type: "string",
+      width: 80,
+      editable: true,
+    },
+    {
+      field: "address",
+      headerName: "Địa chỉ",
+      width: 100,
+      editable: true,
+      type: "string",
+    },
+    {
+      field: "phoneNumber",
+      headerName: "Số điện thoại",
+      width: 160,
+      editable: true,
+      type: "string",
+    },
+    {
+      field: "residentalIdentity",
+      headerName: "CMND/CCCD",
+      width: 120,
+      editable: true,
+      type: "string",
+    },
+    {
+      field: "actions",
+      type: "actions",
+      headerName: "Actions",
+      width: 160,
+      cellClassName: "actions",
+      getActions: ({ id }) => {
+        const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
-    //     if (isInEditMode) {
-    //       return [
-    //         <GridActionsCellItem
-    //           icon={<SaveIcon />}
-    //           label="Save"
-    //           sx={{
-    //             color: "primary.main",
-    //           }}
-    //           onClick={handleSaveClick(id)}
-    //         />,
-    //         <GridActionsCellItem
-    //           icon={<CancelIcon />}
-    //           label="Cancel"
-    //           className="textPrimary"
-    //           onClick={handleCancelClick(id)}
-    //           color="inherit"
-    //         />,
-    //       ];
-    //     }
+        if (isInEditMode) {
+          return [
+            <GridActionsCellItem
+              icon={<SaveIcon />}
+              label="Save"
+              sx={{
+                color: "primary.main",
+              }}
+              onClick={handleSaveClick(id)}
+            />,
+            <GridActionsCellItem
+              icon={<CancelIcon />}
+              label="Cancel"
+              className="textPrimary"
+              onClick={handleCancelClick(id)}
+              color="inherit"
+            />,
+          ];
+        }
 
-    //     return [
-    //       <GridActionsCellItem
-    //         icon={<EditIcon />}
-    //         label="Edit"
-    //         className="textPrimary"
-    //         onClick={handleEditClick(id)}
-    //         color="inherit"
-    //       />,
-    //       <GridActionsCellItem
-    //         icon={<DeleteIcon />}
-    //         label="Delete"
-    //         onClick={handleDeleteClick(id)}
-    //         color="inherit"
-    //       />,
-    //     ];
-    //   },
-    // },
+        return [
+          <GridActionsCellItem
+            icon={<EditIcon />}
+            label="Edit"
+            className="textPrimary"
+            onClick={handleEditClick(id)}
+            color="inherit"
+          />,
+          <GridActionsCellItem
+            icon={<DeleteIcon />}
+            label="Delete"
+            onClick={handleDeleteClick(id)}
+            color="inherit"
+          />,
+          <GridActionsCellItem
+            icon={<AssignmentAddIcon />}
+            label="Khám bệnh"
+            onClick={() => handleExaminate(id)}
+            color="inherit"
+          />,
+        ];
+      },
+    },
   ];
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <Box
-        sx={{
-          height: 500,
-          width: "100%",
-          "& .actions": {
-            color: "text.secondary",
-          },
-          "& .textPrimary": {
-            color: "text.primary",
-          },
-        }}
-      >
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          editMode="row"
-          rowModesModel={rowModesModel}
-          onRowModesModelChange={handleRowModesModelChange}
-          onRowEditStop={handleRowEditStop}
-          processRowUpdate={processRowUpdate}
-          //slots={{ toolbar: EditToolbar }}
-          slotProps={{
-            toolbar: { setRows, setRowModesModel },
+      <div>
+        <Box
+          sx={{
+            height: 500,
+            width: "100%",
+            "& .actions": {
+              color: "text.secondary",
+            },
+            "& .textPrimary": {
+              color: "text.primary",
+            },
           }}
-          onProcessRowUpdateError={(error) => {
-            console.error("Row update error:", error);
-          }}
-        />
-      </Box>
+        >
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            editMode="row"
+            rowModesModel={rowModesModel}
+            onRowModesModelChange={handleRowModesModelChange}
+            onRowEditStop={handleRowEditStop}
+            processRowUpdate={processRowUpdate}
+            slots={{ toolbar: EditToolbar }}
+            slotProps={{
+              toolbar: { setRows, setRowModesModel },
+            }}
+            onProcessRowUpdateError={(error) => {
+              console.error("Row update error:", error);
+            }}
+          />
+        </Box>
+      </div>
     </div>
   );
 }

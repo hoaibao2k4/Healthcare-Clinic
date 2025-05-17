@@ -2,7 +2,7 @@ import { response } from "@/services/axios";
 import axios from "axios";
 export const getInvoice = async () => {
   try {
-    const res = await response.get(`/api/public/examination/bill/1`);
+    const res = await response.get(`/api/public/examination/getAll-bill`);
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
