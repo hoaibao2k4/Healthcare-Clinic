@@ -12,6 +12,7 @@ import PatientList from "@/pages/Patients";
 import PermissionTable from "@/pages/Permission Table";
 import PatientRecords from "@/pages/Records";
 import RevenuePage from "@/pages/Revenue";
+import RoleTable from "@/pages/Role Table";
 import StaffDoctors from "@/pages/Staff Doctors";
 import StaffSupporters from "@/pages/Staff Supporters";
 
@@ -39,7 +40,9 @@ const publicRoutes = [
     component: StaffSupporters,
     layout: DefaultLayout,
   },
-  { path: "/permission", component: PermissionTable, layout: DefaultLayout },
+  { path: "/admin/permission", component: PermissionTable, layout: DefaultLayout },
+  { path: "/admin/role", component: RoleTable, layout: DefaultLayout },
+
 
 ];
 export { publicRoutes };

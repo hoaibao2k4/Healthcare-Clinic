@@ -8,7 +8,13 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import AssignmentAddIcon from "@mui/icons-material/AssignmentAdd";
-
+import {
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+} from "@mui/material";
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -36,53 +42,95 @@ import {
   initialPatient,
   updatePatient,
 } from "@/api/apiPatients";
-import { Patient } from "@/types";
+import { Patient, Permission, Role } from "@/types";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import BasicDatePicker from "@/components/layouts/components/DatePicker";
-import { Chip, Stack, Tooltip } from "@mui/material";
-import PermissionModal from "@/components/layouts/components/Modal/Permission";
+import { TextField } from "@mui/material";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { getAllRoles } from "@/api/apiRole";
+import {
+  getAllPermissionByRole,
+  updatePermissionByRole,
+} from "@/api/apiPermission";
 ////////////
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
+// const roles = ["Market", "Finance", "Development"];
+// const randomRole = () => {
+//   return randomArrayItem(roles);
+// };
 
 const initialRows: GridRowsProp = [
   {
     id: randomId(),
-    name: randomTraderName(),
-    age: 25,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
+    permission: "Danh sách chờ khám bệnh",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
   },
   {
     id: randomId(),
-    name: randomTraderName(),
-    age: 36,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
+    permission: "Danh sách khám bệnh",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
   },
   {
     id: randomId(),
-    name: randomTraderName(),
-    age: 19,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
+    permission: "Lập phiếu khám",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
   },
   {
     id: randomId(),
-    name: randomTraderName(),
-    age: 28,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
+    permission: "Danh sách bệnh nhân (trong ngày)",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
   },
   {
     id: randomId(),
-    name: randomTraderName(),
-    age: 23,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
+    permission: "Hóa đơn (trong ngày)",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
+  },
+  {
+    id: randomId(),
+    permission: "Quản lí bệnh nhân",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
+  },
+  {
+    id: randomId(),
+    permission: "Quản lí thuốc",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
+  },
+  {
+    id: randomId(),
+    permission: "Quản lí hóa đơn",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
+  },
+  {
+    id: randomId(),
+    permission: "Báo cáo",
+    permission_id: null,
+    can_read: false,
+    can_create: false,
+    can_update: false,
   },
 ];
 
@@ -105,12 +153,12 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
       ...oldRows,
       {
         id,
-        fullName: "",
-        gender: "",
-        yearOfBirth: "",
-        address: "",
-        phoneNumber: "",
-        residentalIdentity: "",
+        permission_id: null,
+        permission: "",
+        can_create: false,
+        can_update: false,
+        can_read: false,
+        can_delete: false,
         isNew: true,
       },
     ]);
@@ -122,12 +170,12 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 
   return (
     <GridToolbarContainer>
-      <Button
+      {/* <Button
         color="primary"
         startIcon={<AddIcon />}
         size="large"
         onClick={handleClick}
-      ></Button>
+      ></Button> */}
     </GridToolbarContainer>
   );
 }
@@ -139,17 +187,36 @@ export default function PermissionTable() {
   );
   const [id, setId] = useState<number>(1);
   const navigate = useNavigate();
-  const [mount, setMount] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const permissionUser = useSelector(
+    (state: RootState) => state.permission.login.currentUser
+  );
+
+  const mergePermission = (
+    initialRows: GridRowsProp,
+    apiPermission: Permission[]
+  ): GridRowsProp => {
+    return initialRows.map((row) => {
+      const matched = apiPermission.find(
+        (item) => item.permission_id === row.permission_id
+      );
+      return {
+        ...row,
+        can_create: matched?.can_create || false,
+        can_read: matched?.can_read || false,
+        can_update: matched?.can_update || false,
+      };
+    });
+  };
+
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchPermissionRole = async () => {
       try {
-        const res = await getAllPatients();
-        const dataWithId = res.data.map((item: Patient, index: number) => ({
-          ...item,
-          id: id + index,
-        }));
-        setRows(dataWithId);
-        setId(id + res.data.length);
+        if (permissionUser && permissionUser?.accessToken) {
+          const roleRes = await getAllRoles(permissionUser?.accessToken);
+          setRoles(roleRes);
+        }
       } catch (err: any) {
         console.error("Fetch API failed:");
         if (err.name === "TypeError") {
@@ -159,7 +226,7 @@ export default function PermissionTable() {
         }
       }
     };
-    fetchPatients();
+    fetchPermissionRole();
   }, []);
   // console.log(rows);
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
@@ -219,16 +286,10 @@ export default function PermissionTable() {
       setRows(rows.filter((row) => row.id !== id));
     }
   };
-  const checkIdentity = (identity: string) => {
-    const regex = /^\d{12}$/;
-    return regex.test(identity);
-  };
-  const chekckPhoneNumber = (phoneNumber: string) => {
-    return /^0\d{9}$/.test(phoneNumber);
-  };
+
   const processRowUpdate = async (newRow: GridRowModel) => {
-    if (!checkIdentity(newRow?.residentalIdentity)) {
-      toast.error("CMND/CCCD không hợp lệ", {
+    if (!role) {
+      return toast.info("Bạn chưa chọn vai trò", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -237,71 +298,79 @@ export default function PermissionTable() {
         draggable: true,
         progress: undefined,
       });
-      throw new Error("Invalid CCCD");
-    } else if (!chekckPhoneNumber(newRow?.phoneNumber)) {
-      toast.error("Số điện thoại không hợp lệ", {
-        position: "bottom-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
-      throw new Error("Invalid phone number");
-    }
-    const updatedRow: Patient = { ...(newRow as Patient), isNew: false };
-    try {
-      if (newRow.isNew) {
-        const res = await initialPatient(updatedRow as Patient);
-        updatedRow.patientId = res.patientId;
-        if (res)
-          toast.success("Thêm bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-      } else {
-        const res = await updatePatient(updatedRow as Patient);
-        if (res)
-          toast.success("Cập nhật bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+    } else {
+      const updatedRow: Permission = {
+        ...(newRow as Permission),
+        isNew: false,
+      };
+      const data: Permission = {
+        permission_id: updatedRow.permission_id,
+        can_create: updatedRow.can_create,
+        can_read: updatedRow.can_read,
+        can_update: updatedRow.can_update,
+        can_delete: false,
+        role: role,
+      };
+      try {
+        if (permissionUser && permissionUser.accessToken) {
+          const res = await updatePermissionByRole(
+            permissionUser?.accessToken,
+            data
+          );
+          if (res)
+            toast.success("Cập nhật thành công", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+        }
+      } catch (err: any) {
+        console.error("API request failed:", err);
+        if (err.name === "TypeError") {
+          console.error("Network error or CORS issue:", err.message);
+        } else {
+          console.error("Unexpected error:", err.message || err);
+        }
       }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
-      } else {
-        console.error("Unexpected error:", err.message || err);
-      }
+      setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+      return updatedRow;
     }
-    setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
-    return updatedRow;
   };
 
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
-  const handleExaminate = (id: GridRowId) => {
-    const patient = rows.find((row) => row.id === id);
-    console.log(patient);
-    navigate("/records", { state: { patient } });
+
+  const handleSetRole = async (e: SelectChangeEvent) => {
+    try {
+      if (permissionUser && permissionUser.accessToken) {
+        const res = await getAllPermissionByRole(
+          permissionUser?.accessToken,
+          permissionUser.selected_role
+        );
+        const dataPermission = mergePermission(initialRows, res.permissions);
+        // const dataWithId = res.data.map((item: Permission, index: number) => ({
+        //   ...item,
+        //   id: id + index,
+        // }));
+        setRows(dataPermission);
+        setRole(e.target.value);
+        console.log("data: ", dataPermission);
+        // setId(id + res.data.length);
+      }
+    } catch (err: unknown) {
+      console.log("Err", err);
+    }
   };
+
   const columns: GridColDef[] = [
-    { field: "page", headerName: "Trang", width: 200, editable: true },
+    { field: "permission", headerName: "Trang", width: 300, editable: true },
     {
-      field: "create",
+      field: "can_create",
       headerName: "Create",
       width: 100,
       align: "center",
@@ -310,14 +379,14 @@ export default function PermissionTable() {
       type: "boolean",
     },
     {
-      field: "read",
+      field: "can_read",
       headerName: "Read",
       type: "boolean",
       width: 100,
       editable: true,
     },
     {
-      field: "update",
+      field: "can_update",
       headerName: "Update",
       width: 100,
       editable: true,
@@ -365,7 +434,7 @@ export default function PermissionTable() {
             label="Delete"
             onClick={handleDeleteClick(id)}
             color="inherit"
-          />
+          />,
         ];
       },
     },
@@ -373,7 +442,25 @@ export default function PermissionTable() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <PermissionModal mount={mount} onClose={() => setMount(false)} />
+      <div className="my-4">
+        <FormControl sx={{ width: 140 }}>
+          <InputLabel id="role-label">Vai trò</InputLabel>
+          <Select
+            labelId="role-label"
+            id="role"
+            value={role ?? ""}
+            label="Vai trò"
+            onChange={handleSetRole}
+          >
+            {roles?.map((value, index) => (
+              <MenuItem key={index} value={value.role_id}>
+                {value.role_name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </div>
+
       <div>
         <Box
           sx={{

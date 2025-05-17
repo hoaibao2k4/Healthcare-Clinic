@@ -4,3 +4,5 @@ export * from './user'
 export * from './report'
 export * from './record'
 export * from './invoice'
+export * from "./roles"
+export * from './permission'

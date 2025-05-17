@@ -85,10 +85,24 @@ const NAVIGATION: NavigationItemWithPermission[] = [
     ],
   },
   {
-    segment: "permission",
+    segment: "admin",
     title: "Quản lí phân quyền",
     icon: <PeopleAltIcon />,
     permissions: ["ADMIN"],
+    children: [
+      {
+        segment: "role",
+        title: "Quản lí vai trò",
+        icon: <PeopleAltIcon />,
+        permissions: ["ADMIN"],
+      },
+      {
+        segment: "permission",
+        title: "Quản lí quyền",
+        icon: <PeopleAltIcon />,
+        permissions: ["ADMIN"],
+      },
+    ],
   },
   {
     segment: "exams",
