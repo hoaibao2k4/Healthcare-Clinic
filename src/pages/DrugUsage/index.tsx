@@ -7,9 +7,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
-import { TextField } from "@mui/material";
+import { TextField, MenuItem, Typography } from "@mui/material";
 import {
-  GridRowsProp,
   GridRowModesModel,
   GridRowModes,
   DataGrid,
@@ -20,15 +19,19 @@ import {
   GridRowId,
   GridRowModel,
   GridRowEditStopReasons,
-  GridSlotProps,
 } from "@mui/x-data-grid";
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomId,
-  randomArrayItem,
-} from "@mui/x-data-grid-generator";
 import { toast } from "react-toastify";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
 import {
   deleteDrugUnit,
@@ -36,81 +39,44 @@ import {
   initialDrugUnit,
   updateDrugUnit,
 } from "@/api/apiDrug";
-import { DrugUnit } from "@/types/drug";
-////////////
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
 
-const initialRows: GridRowsProp = [
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 25,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 36,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 19,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 28,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 23,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-];
+import { getDrugsReport } from "@/api/apiReport";
+import { Drug } from "@/types/drug";
+import { DrugReport } from "@/types/report";
 
-declare module "@mui/x-data-grid" {
-  interface ToolbarPropsOverrides {
-    setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
-    setRowModesModel: (
-      newModel: (oldModel: GridRowModesModel) => GridRowModesModel
-    ) => void;
-  }
-}
-////////////
+function EditToolbar({
+  setRows,
+  setRowModesModel,
+  idNew,
+  setIdNew,
+}: {
+  setRows: React.Dispatch<React.SetStateAction<any[]>>;
 
-function EditToolbar(props: GridSlotProps["toolbar"]) {
-  const { setRows, setRowModesModel } = props;
+  setRowModesModel: React.Dispatch<React.SetStateAction<GridRowModesModel>>;
 
+  idNew: number;
+
+  setIdNew: React.Dispatch<React.SetStateAction<number>>;
+}) {
   const handleClick = () => {
-    const id = Math.floor(Math.random() * 100);
+    const newId = idNew + 1;
+    setIdNew(newId);
     setRows((oldRows) => [
       ...oldRows,
       {
-        id,
+        id: newId,
+        drugId: 0,
+        drugName: "",
         unitName: "",
-        description: "",
+        usedNumber: 0,
         isNew: true,
       },
     ]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+      [newId]: { mode: GridRowModes.Edit, fieldToFocus: "drugName" },
     }));
   };
-
   return (
     <GridToolbarContainer>
       <Button
@@ -124,33 +90,80 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 }
 
 export default function DrugUsagePage() {
-  const [rows, setRows] = React.useState(initialRows);
-  const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
-    {}
-  );
-  const [id, setId] = useState<number>(1);
+  const today = new Date();
+  const [month, setMonth] = useState<number>(today.getMonth() + 1);
+  const [year, setYear] = useState<number>(today.getFullYear());
+  const [rows, setRows] = useState<any[]>([]);
+  const [topUsed, setTopUsed] = useState<any[]>([]);
+  const [topN, setTopN] = useState<number>(10);
+  const [showChart, setShowChart] = useState<boolean>(true);
+  const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+  const [idNew, setIdNew] = useState<number>(1);
+
   useEffect(() => {
-    const fetchDrugUnit = async () => {
-      try {
-        const res = await getAllDrugUnits();
-        const dataWithId = res.data.map((item: DrugUnit, index: number) => ({
-          ...item,
-          id: id + index,
-        }));
-        setRows(dataWithId);
-        setId(id + res.data.length);
-      } catch (err: any) {
-        console.error("Fetch API failed:");
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
-        }
-      }
-    };
+    handleFetch(false);
     fetchDrugUnit();
   }, []);
-  // console.log(rows);
+  const fetchDrugUnit = async () => {
+    try {
+      const res = await getAllDrugUnits();
+      console.log("Danh sách đơn vị thuốc:", res.data);
+    } catch (err: any) {
+      console.error("Fetch API failed:", err);
+      if (err.name === "TypeError") {
+        console.error("Network error or CORS issue:", err.message);
+      } else {
+        console.error("Unexpected error:", err.message || err);
+      }
+    }
+  };
+
+  const handleFetch = async (showToast = true) => {
+    try {
+      const res = await getDrugsReport(month, year);
+      const formatted = Array.isArray(res)
+        ? res.map((item: any, index: number) => ({
+            id: index + 1,
+            drugId: item.drug?.drugId,
+            drugName: item.drug?.drugName,
+
+            unitName: item.drug?.drugsUnit?.unitName,
+
+            usedNumber: item.usageNumber,
+
+            isNew: false,
+          }))
+        : [];
+
+      setRows(formatted);
+      const sorted = [...formatted]
+        .sort((a, b) => b.usedNumber - a.usedNumber)
+
+        .slice(0, topN);
+
+      setTopUsed(sorted);
+      if (formatted.length === 0 && showToast) {
+        toast.info("Không có dữ liệu sử dụng thuốc", {
+          position: "bottom-right",
+
+          autoClose: 2000,
+
+          hideProgressBar: false,
+
+          closeOnClick: true,
+
+          pauseOnHover: true,
+
+          draggable: true,
+
+          progress: undefined,
+        });
+      }
+    } catch (err: any) {
+      console.error("API Request Failed:", err);
+    }
+  };
+
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
     event
@@ -204,7 +217,7 @@ export default function DrugUsagePage() {
     });
 
     const editedRow = rows.find((row) => row.id === id);
-    if (editedRow!.isNew) {
+    if (editedRow?.isNew) {
       setRows(rows.filter((row) => row.id !== id));
     }
   };
@@ -215,7 +228,7 @@ export default function DrugUsagePage() {
         const res = await initialDrugUnit(updatedRow as DrugUnit);
         updatedRow.unitId = res.unitId;
         if (res)
-          toast.success("Thêm bệnh thành công", {
+          toast.success("Thêm đơn vị thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -227,7 +240,7 @@ export default function DrugUsagePage() {
       } else {
         const res = await updateDrugUnit(updatedRow as DrugUnit);
         if (res)
-          toast.success("Cập nhật bệnh thành công", {
+          toast.success("Cập nhật đơn vị thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -238,7 +251,7 @@ export default function DrugUsagePage() {
           });
       }
     } catch (err: any) {
-      console.error("API request failed:", err);
+      console.error("API update error:", err);
       if (err.name === "TypeError") {
         console.error("Network error or CORS issue:", err.message);
       } else {
@@ -254,29 +267,23 @@ export default function DrugUsagePage() {
   };
 
   const columns: GridColDef[] = [
+    { field: "drugId", headerName: "Mã thuốc", width: 120, editable: true },
     {
-      field: "unitName",
-      headerName: "Thuốc",
+      field: "drugName",
+      headerName: "Tên thuốc",
       width: 180,
       editable: true,
     },
     {
-      field: "description",
+      field: "unitName",
       headerName: "Đơn vị tính",
       type: "string",
       width: 180,
       editable: true,
     },
     {
-      field: "soluong",
-      headerName: "Số lượng",
-      type: "string",
-      width: 180,
-      editable: true,
-    },
-    {
-      field: "áds",
-      headerName: "Số lần dùng",
+      field: "usedNumber",
+      headerName: "Số lượng dùng",
       type: "string",
       width: 180,
       editable: true,
@@ -287,6 +294,7 @@ export default function DrugUsagePage() {
       headerName: "Actions",
       width: 100,
       cellClassName: "actions",
+
       getActions: ({ id }) => {
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
@@ -331,53 +339,115 @@ export default function DrugUsagePage() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <div className="py-4 flex gap-3">
+      <Box mb={2} display="flex" gap={2} alignItems="center">
         <TextField
-          id="month"
+          select
           label="Tháng"
-          variant="outlined"
           size="small"
-          type="number"
-        />
-        <TextField
-          id="year"
-          label="Năm"
-          variant="outlined"
-          size="small"
-          type="number"
-        />
-      </div>
-      <div>
-        <Box
-          sx={{
-            height: 500,
-            width: "100%",
-            "& .actions": {
-              color: "text.secondary",
-            },
-            "& .textPrimary": {
-              color: "text.primary",
-            },
-          }}
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
         >
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            editMode="row"
-            rowModesModel={rowModesModel}
-            onRowModesModelChange={handleRowModesModelChange}
-            onRowEditStop={handleRowEditStop}
-            processRowUpdate={processRowUpdate}
-            slots={{ toolbar: EditToolbar }}
-            slotProps={{
-              toolbar: { setRows, setRowModesModel },
-            }}
-            onProcessRowUpdateError={(error) => {
-              console.error("Row update error:", error);
-            }}
-          />
+          {[...Array(12)].map((_, i) => (
+            <MenuItem key={i + 1} value={i + 1}>
+              Tháng {i + 1}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          label="Năm"
+          size="small"
+          type="number"
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+        />
+
+        <Button variant="contained" onClick={() => handleFetch(true)}>
+          Xem báo cáo
+        </Button>
+
+        <Button variant="outlined" onClick={() => setShowChart(!showChart)}>
+          {showChart ? "Ẩn biểu đồ" : "Hiện biểu đồ"}
+        </Button>
+      </Box>
+
+      <Box
+        sx={{
+          height: 500,
+
+          width: "100%",
+
+          mb: 4,
+
+          "& .actions": {
+            color: "text.secondary",
+          },
+
+          "& .textPrimary": {
+            color: "text.primary",
+          },
+        }}
+      >
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          editMode="row"
+          rowModesModel={rowModesModel}
+          onRowModesModelChange={handleRowModesModelChange}
+          onRowEditStop={handleRowEditStop}
+          processRowUpdate={processRowUpdate}
+          slots={{ toolbar: EditToolbar }}
+          slotProps={{
+            toolbar: { setRows, setRowModesModel, idNew, setIdNew },
+          }}
+          onProcessRowUpdateError={(error) => {
+            console.error("Row update error:", error);
+          }}
+        />
+      </Box>
+      {showChart && (
+        <Box width="100%">
+          <Box
+            mb={1}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              textAlign="center"
+              sx={{ flexGrow: 1 }}
+            >
+              Top {topN} thuốc sử dụng nhiều nhất
+            </Typography>
+            <TextField
+              label="Top N"
+              size="small"
+              type="number"
+              value={topN}
+              onChange={(e) => setTopN(Number(e.target.value))}
+              sx={{ width: 100 }}
+            />
+          </Box>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={topUsed}
+              margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+
+              <XAxis dataKey="drugName" />
+
+              <YAxis />
+
+              <Tooltip />
+
+              <Bar dataKey="usedNumber" fill="#1976d2" />
+            </BarChart>
+          </ResponsiveContainer>
         </Box>
-      </div>
+      )}
     </div>
   );
 }

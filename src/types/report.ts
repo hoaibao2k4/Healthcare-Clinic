@@ -11,11 +11,13 @@ export interface Revenue {
 }
 
 export interface DayReport {
+    id?:string,
     dayReportId: number,
     date: string,
     numberOfPatients: number,
     revenue: number,
-    ratio: number
+    ratio: number,
+    isNew?: boolean
 }
 
 export interface DrugReport {
