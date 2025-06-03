@@ -24,7 +24,7 @@ export const getRevenueReport = async (month: number, year: string) => {
 export const getDrugsReport = async (month: number, year: number) => {
   try {
     const res = await response.get(
-      `/api/public/drugs-usage-report/get-drugs-usage-report=${month}&year=${year}`
+     `/api/public/drugs-usage-report/get-drugs-usage-report?month=${month}&year=${year}`
     );
     return res.data;
   } catch (err: unknown) {

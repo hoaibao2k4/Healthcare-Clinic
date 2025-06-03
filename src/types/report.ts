@@ -27,3 +27,11 @@ export interface DrugReport {
     year: number,
     usageNumber: number
 }
+export interface DrugUsageRow {
+  id: number;
+  drugId: number;
+  drugName: string;
+  unitName: string;
+  usedNumber: number;
+  isNew?: boolean;
+}

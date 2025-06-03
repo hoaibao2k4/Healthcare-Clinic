@@ -7,6 +7,10 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { TextField, MenuItem, Typography } from "@mui/material";
 import {
   GridRowsProp,
@@ -84,8 +88,35 @@ export default function RevenuePage() {
   const handleFetch = async (showToast = true) => {
     try {
       const res: Revenue = await getRevenueReport(month, year.toString());
+      console.log("API response: ", res);
 
       const dayReports = res?.dayReports || [];
+      console.log("dayReports API:", dayReports);
+
+      //
+      // const calculatedTotal = dayReports.reduce(
+      //   (acc, item) => acc + (item.revenue || 0),
+      //   0
+      // );
+
+      // const formatted = dayReports.map((item, index) => {
+      //   const ratio = calculatedTotal > 0 ? item.revenue / calculatedTotal : 0;
+
+      //   return {
+      //     ...item,
+      //     id: (index + 1).toString(),
+      //     ratio,
+      //   };
+      // });
+
+      // formatted.sort(
+      //   (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      // );
+
+      // setRows(formatted);
+      // setTotalRevenue(calculatedTotal);
+
+      //
 
       const formatted = dayReports.map((item, index) => ({
         ...item,
@@ -95,8 +126,10 @@ export default function RevenuePage() {
       setRows(formatted);
       setTotalRevenue(res?.totalRevenue || 0);
 
+      //
+
       if (formatted.length === 0 && showToast) {
-        toast.info("Không có dữ liệu doanh thu", {
+        toast.info("No revenue data found", {
           position: "bottom-right",
 
           autoClose: 2000,
@@ -122,10 +155,31 @@ export default function RevenuePage() {
       }
     }
   };
+  //
+  // useEffect(() => {
+  //   if (!rows || rows.length === 0) return;
+
+  //   const calculatedTotal = rows.reduce(
+  //     (acc, item) => acc + (item.revenue || 0),
+  //     0
+  //   );
+
+  //   const updatedRows = rows.map((item) => ({
+  //     ...item,
+
+  //     ratio: calculatedTotal > 0 ? item.revenue / calculatedTotal : 0,
+  //   }));
+
+  //   setTotalRevenue(calculatedTotal);
+  //   console.log("Rows updated from local calculation:", updatedRows);
+  //   setRows(updatedRows);
+  // }, [JSON.stringify(rows)]);
+  //
 
   useEffect(() => {
     handleFetch(false);
   }, []);
+
   const handleEditClick = (id: GridRowId) => {
     return () => {
       setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
@@ -189,6 +243,7 @@ export default function RevenuePage() {
     setRowModesModel(newRowModesModel);
   };
   const processRowUpdate = (newRow: GridRowModel) => {
+    console.log("Row updated: ", newRow);
     try {
       const updatedRow: DayReport = { ...(newRow as DayReport), isNew: false };
 
@@ -341,20 +396,18 @@ export default function RevenuePage() {
         alignItems="center"
         justifyContent="space-between"
       >
-        <Typography variant="h6" color="primary">
-          Tổng doanh thu: {totalRevenue.toLocaleString("vi-VN")} đ
-        </Typography>
         <Box display="flex" gap={2} alignItems="center">
           <TextField
             select
             label="Tháng"
             size="small"
             value={month}
+            sx={{ width: 100 }}
             onChange={(e) => setMonth(Number(e.target.value))}
           >
             {[...Array(12)].map((_, i) => (
               <MenuItem key={i + 1} value={i + 1}>
-                Tháng {i + 1}
+                {i + 1}
               </MenuItem>
             ))}
           </TextField>
@@ -362,17 +415,59 @@ export default function RevenuePage() {
             label="Năm"
             size="small"
             type="number"
+            sx={{ width: 100 }}
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
           />
-          <Button variant="contained" onClick={() => handleFetch(true)}>
-            Xem báo cáo
+          <Button
+            variant="contained"
+            onClick={() => handleFetch(true)}
+            sx={{
+              minWidth: 40,
+              minHeight: 40,
+              padding: 0,
+              borderRadius: 2,
+              backgroundColor: "#1976d2",
+              "&:hover": {
+                backgroundColor: "#1565c0",
+              },
+            }}
+          >
+            <SearchIcon sx={{ color: "white", fontSize: 20 }} />
           </Button>
-
-          <Button variant="outlined" onClick={() => setShowChart(!showChart)}>
-            {showChart ? "Ẩn biểu đồ" : "Hiện biểu đồ"}
+          <Button
+            variant="contained"
+            onClick={() => setShowChart(!showChart)}
+            sx={{
+              minWidth: 40,
+              minHeight: 40,
+              padding: 0,
+              borderRadius: 2,
+              backgroundColor: "#1976d2",
+              "&:hover": {
+                backgroundColor: "#1565c0",
+              },
+            }}
+          >
+            <BarChartIcon sx={{ color: "white", fontSize: 20 }} />
           </Button>
         </Box>
+        <TextField
+          label="Tổng doanh thu"
+          size="small"
+          value={`${totalRevenue.toLocaleString("vi-VN")} đ`}
+          variant="outlined"
+          slotProps={{
+            input: {
+              readOnly: true,
+              style: {
+                fontWeight: "bold",
+                color: "#1976d2",
+              },
+            },
+          }}
+          sx={{ width: 180 }}
+        />
       </Box>
       <Box
         sx={{
@@ -415,7 +510,10 @@ export default function RevenuePage() {
 
           <ResponsiveContainer width="100%" height={300}>
             <LineChart
-              data={rows}
+              data={[...rows].sort(
+                (a, b) =>
+                  new Date(a.date).getTime() - new Date(b.date).getTime()
+              )}
               margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
