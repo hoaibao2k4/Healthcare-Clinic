@@ -7,9 +7,10 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
-import { TextField } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import { TextField, MenuItem, Typography } from "@mui/material";
 import {
-  GridRowsProp,
   GridRowModesModel,
   GridRowModes,
   DataGrid,
@@ -20,97 +21,48 @@ import {
   GridRowId,
   GridRowModel,
   GridRowEditStopReasons,
+  GridRowsProp,
   GridSlotProps,
 } from "@mui/x-data-grid";
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomId,
-  randomArrayItem,
-} from "@mui/x-data-grid-generator";
 import { toast } from "react-toastify";
-
 import {
-  deleteDrugUnit,
-  getAllDrugUnits,
-  initialDrugUnit,
-  updateDrugUnit,
-} from "@/api/apiDrug";
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+import { getDrugsReport } from "@/api/apiReport";
+import { getAllDrugUnits } from "@/api/apiDrug";
 import { DrugUnit } from "@/types/drug";
-////////////
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
-
-const initialRows: GridRowsProp = [
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 25,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 36,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 19,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 28,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 23,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-];
-
-declare module "@mui/x-data-grid" {
-  interface ToolbarPropsOverrides {
-    setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
-    setRowModesModel: (
-      newModel: (oldModel: GridRowModesModel) => GridRowModesModel
-    ) => void;
-  }
-}
-////////////
+import { DrugReport, DrugUsageRow } from "@/types/report";
 
 function EditToolbar(props: GridSlotProps["toolbar"]) {
   const { setRows, setRowModesModel } = props;
-
+  const [idNew, setIdNew] = useState<number>(100);
   const handleClick = () => {
-    const id = Math.floor(Math.random() * 100);
+    const id = idNew;
+    setIdNew(idNew + 1);
     setRows((oldRows) => [
       ...oldRows,
       {
         id,
+        drugId: 0,
+        drugName: "",
         unitName: "",
-        description: "",
+        usedNumber: 0,
         isNew: true,
       },
     ]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+      [id]: { mode: GridRowModes.Edit, fieldToFocus: "usedNumber" },
     }));
   };
-
   return (
     <GridToolbarContainer>
       <Button
@@ -124,33 +76,157 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 }
 
 export default function DrugUsagePage() {
-  const [rows, setRows] = React.useState(initialRows);
-  const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
-    {}
-  );
-  const [id, setId] = useState<number>(1);
+  const today = new Date();
+  const [month, setMonth] = useState<number>(today.getMonth() + 1);
+  const [year, setYear] = useState<number>(today.getFullYear());
+  const [rows, setRows] = useState<DrugUsageRow[]>([]);
+  const [topUsed, setTopUsed] = useState<DrugUsageRow[]>([]);
+  const [topN, setTopN] = useState<number>(10);
+  const [showChart, setShowChart] = useState<boolean>(true);
+  const [unitOptions, setUnitOptions] = useState<DrugUnit[]>([]);
+  const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+
   useEffect(() => {
-    const fetchDrugUnit = async () => {
-      try {
-        const res = await getAllDrugUnits();
-        const dataWithId = res.data.map((item: DrugUnit, index: number) => ({
-          ...item,
-          id: id + index,
-        }));
-        setRows(dataWithId);
-        setId(id + res.data.length);
-      } catch (err: any) {
-        console.error("Fetch API failed:");
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
-        }
-      }
-    };
-    fetchDrugUnit();
+    fetchDrugUnit().then(() => handleFetch(false));
   }, []);
-  // console.log(rows);
+  const fetchDrugUnit = async () => {
+    try {
+      const res = await getAllDrugUnits();
+      setUnitOptions(res);
+    } catch (err: any) {
+      console.error("Fetch API failed:", err);
+      if (err.name === "TypeError") {
+        console.error("Network error or CORS issue:", err.message);
+      } else {
+        console.error("Unexpected error:", err.message || err);
+      }
+    }
+  };
+  let hasShownError = false;
+  const handleFetch = async (showToast = true) => {
+    try {
+      const res: DrugReport[] = await getDrugsReport(month, year);
+      if (!res || !Array.isArray(res)) {
+        if (!hasShownError) {
+          toast.error("Invalid API response.", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          hasShownError = true;
+        }
+        return;
+      }
+      hasShownError = false;
+      const formatted = Array.isArray(res)
+        ? res.map((item: DrugReport, index: number) => ({
+            id: index + 1,
+
+            drugId: item.drug?.[0]?.drugId ?? 0,
+
+            drugName: item.drug?.[0]?.drugName ?? "",
+
+            unitName: item.drug?.[0]?.drugsUnit?.unitName ?? "",
+
+            usedNumber: item.usageNumber,
+
+            isNew: false,
+          }))
+        : [];
+
+      setRows(formatted);
+      const sorted = [...formatted]
+        .sort((a, b) => b.usedNumber - a.usedNumber)
+
+        .slice(0, topN);
+
+      setTopUsed(sorted);
+      // setTopUsed(res?.topUsed || []);
+      if (formatted.length === 0 && showToast) {
+        toast.info("No drug usage data found", {
+          position: "bottom-right",
+
+          autoClose: 2000,
+
+          hideProgressBar: false,
+
+          closeOnClick: true,
+
+          pauseOnHover: true,
+
+          draggable: true,
+
+          progress: undefined,
+        });
+      }
+    } catch (err: any) {
+      console.error("API Request Failed:", err);
+    }
+  };
+
+  //
+  // useEffect(() => {
+  //   if (!rows || rows.length === 0) return;
+  //   const sorted = [...rows]
+  //     .sort((a, b) => b.usedNumber - a.usedNumber)
+  //     .slice(0, topN);
+  //   setTopUsed(sorted);
+  // }, [rows, topN]);
+  //
+
+  const processRowUpdate = async (newRow: GridRowModel) => {
+    const updatedRow: DrugUsageRow = {
+      id: newRow.id,
+
+      drugId: newRow.drugId,
+
+      drugName: newRow.drugName,
+
+      unitName: newRow.unitName,
+
+      usedNumber: newRow.usedNumber,
+
+      isNew: false,
+    };
+    try {
+      if (newRow.isNew) {
+        toast.success("Thêm thành công", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      } else {
+        toast.success("Cập nhật thành công", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      }
+    } catch (err: any) {
+      console.error("API update error:", err);
+      if (err.name === "TypeError") {
+        console.error("Network error or CORS issue:", err.message);
+      } else {
+        console.error("Unexpected error:", err.message || err);
+      }
+    }
+    setRows((prevRows) =>
+      prevRows.map((row) => (row.id === newRow.id ? updatedRow : row))
+    );
+    return updatedRow;
+  };
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
     event
@@ -170,22 +246,18 @@ export default function DrugUsagePage() {
 
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
-      setRows(rows.filter((row) => row.id !== id));
-      const unitId = rows.find((row) => row.id === id)?.unitId;
-      console.log("unitId", unitId);
       try {
-        const res = await deleteDrugUnit(unitId);
-        if (res) {
-          toast.success("Xóa thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-        }
+        setRows((prevRows) => prevRows.filter((row) => row.id !== id));
+
+        toast.success("Xóa thành công", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
       } catch (err: any) {
         console.error("API request failed:", err);
         if (err.name === "TypeError") {
@@ -204,79 +276,50 @@ export default function DrugUsagePage() {
     });
 
     const editedRow = rows.find((row) => row.id === id);
-    if (editedRow!.isNew) {
+    if (editedRow?.isNew) {
       setRows(rows.filter((row) => row.id !== id));
     }
-  };
-  const processRowUpdate = async (newRow: GridRowModel) => {
-    const updatedRow: DrugUnit = { ...(newRow as DrugUnit), isNew: false };
-    try {
-      if (newRow.isNew) {
-        const res = await initialDrugUnit(updatedRow as DrugUnit);
-        updatedRow.unitId = res.unitId;
-        if (res)
-          toast.success("Thêm bệnh thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-      } else {
-        const res = await updateDrugUnit(updatedRow as DrugUnit);
-        if (res)
-          toast.success("Cập nhật bệnh thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-      }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
-      } else {
-        console.error("Unexpected error:", err.message || err);
-      }
-    }
-    setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
-    return updatedRow;
   };
 
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
+  const setRowsFromGrid = (
+    updater: (oldRows: readonly GridRowModel[]) => readonly GridRowModel[]
+  ) => {
+    setRows((prevRows) => {
+      const result = updater([...prevRows]);
+      return result.map((r) => ({ ...r })) as DrugUsageRow[];
+    });
+  };
+
+  const setRowModesModelFromGrid = (
+    model: (oldModel: GridRowModesModel) => GridRowModesModel
+  ) => {
+    setRowModesModel(model);
+  };
 
   const columns: GridColDef[] = [
+    { field: "drugId", headerName: "Mã thuốc", width: 120, editable: true },
+    {
+      field: "drugName",
+      headerName: "Tên thuốc",
+      width: 180,
+      editable: true,
+    },
     {
       field: "unitName",
-      headerName: "Thuốc",
-      width: 180,
-      editable: true,
-    },
-    {
-      field: "description",
       headerName: "Đơn vị tính",
-      type: "string",
+      type: "singleSelect",
       width: 180,
+      valueOptions: Array.isArray(unitOptions)
+        ? unitOptions.map((u) => u.unitName)
+        : [],
       editable: true,
     },
     {
-      field: "soluong",
-      headerName: "Số lượng",
-      type: "string",
-      width: 180,
-      editable: true,
-    },
-    {
-      field: "áds",
-      headerName: "Số lần dùng",
+      field: "usedNumber",
+      headerName: "Số lượng dùng",
       type: "string",
       width: 180,
       editable: true,
@@ -284,9 +327,10 @@ export default function DrugUsagePage() {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 100,
       cellClassName: "actions",
+
       getActions: ({ id }) => {
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
@@ -331,53 +375,143 @@ export default function DrugUsagePage() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <div className="py-4 flex gap-3">
+      <Box mb={2} display="flex" gap={2} alignItems="center">
         <TextField
-          id="month"
+          select
           label="Tháng"
-          variant="outlined"
           size="small"
-          type="number"
-        />
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
+        >
+          {[...Array(12)].map((_, i) => (
+            <MenuItem key={i + 1} value={i + 1}>
+              Tháng {i + 1}
+            </MenuItem>
+          ))}
+        </TextField>
         <TextField
-          id="year"
           label="Năm"
-          variant="outlined"
           size="small"
           type="number"
+          sx={{ width: 100 }}
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
         />
-      </div>
-      <div>
-        <Box
+        <Button
+          variant="contained"
+          onClick={() => handleFetch(true)}
           sx={{
-            height: 500,
-            width: "100%",
-            "& .actions": {
-              color: "text.secondary",
-            },
-            "& .textPrimary": {
-              color: "text.primary",
+            minWidth: 40,
+            minHeight: 40,
+            padding: 0,
+            borderRadius: 2,
+            backgroundColor: "#1976d2",
+            "&:hover": {
+              backgroundColor: "#1565c0",
             },
           }}
         >
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            editMode="row"
-            rowModesModel={rowModesModel}
-            onRowModesModelChange={handleRowModesModelChange}
-            onRowEditStop={handleRowEditStop}
-            processRowUpdate={processRowUpdate}
-            slots={{ toolbar: EditToolbar }}
-            slotProps={{
-              toolbar: { setRows, setRowModesModel },
-            }}
-            onProcessRowUpdateError={(error) => {
-              console.error("Row update error:", error);
-            }}
-          />
+          <SearchIcon sx={{ color: "white", fontSize: 20 }} />
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => setShowChart(!showChart)}
+          sx={{
+            minWidth: 40,
+            minHeight: 40,
+            padding: 0,
+            borderRadius: 2,
+            backgroundColor: "#1976d2",
+            "&:hover": {
+              backgroundColor: "#1565c0",
+            },
+          }}
+        >
+          <BarChartIcon sx={{ color: "white", fontSize: 20 }} />
+        </Button>
+      </Box>
+
+      <Box
+        sx={{
+          height: 500,
+
+          width: "100%",
+
+          mb: 4,
+
+          "& .actions": {
+            color: "text.secondary",
+          },
+
+          "& .textPrimary": {
+            color: "text.primary",
+          },
+        }}
+      >
+        <DataGrid<DrugUsageRow>
+          rows={rows}
+          columns={columns}
+          editMode="row"
+          rowModesModel={rowModesModel}
+          onRowModesModelChange={handleRowModesModelChange}
+          onRowEditStop={handleRowEditStop}
+          processRowUpdate={processRowUpdate}
+          slots={{ toolbar: EditToolbar }}
+          slotProps={{
+            toolbar: {
+              setRows: setRowsFromGrid,
+              setRowModesModel: setRowModesModelFromGrid,
+            },
+          }}
+          onProcessRowUpdateError={(error) => {
+            console.error("Row update error:", error);
+          }}
+        />
+      </Box>
+      {showChart && (
+        <Box width="100%">
+          <Box
+            mb={1}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              textAlign="center"
+              sx={{ flexGrow: 1 }}
+            >
+              Top {topN} thuốc sử dụng nhiều nhất
+            </Typography>
+            <TextField
+              label="Top N"
+              size="small"
+              type="number"
+              value={topN}
+              onChange={(e) => setTopN(Number(e.target.value))}
+              sx={{ width: 100 }}
+            />
+          </Box>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={topUsed}
+              margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+
+              <XAxis dataKey="drugName" />
+
+              <YAxis />
+
+              <Tooltip />
+
+              <Bar dataKey="usedNumber" fill="#1976d2" />
+            </BarChart>
+          </ResponsiveContainer>
         </Box>
-      </div>
+      )}
     </div>
   );
 }
