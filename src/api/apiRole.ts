@@ -49,3 +49,25 @@ export const createRole = async (
     }
   }
 };
+
+export const deleteRole = async (id: number, token: string) => {
+  try {
+    const res = await response.delete(`/api/admin/role/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return (
+        error.response?.data || error.message,
+        error.response?.status || "No status"
+      );
+    } else if (error instanceof Error) {
+      return "Request Err: " + error.message;
+    } else {
+      return "Unknown error: " + error;
+    }
+  }
+};

@@ -64,6 +64,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Danh sách chờ khám bệnh",
     permission_id: null,
+    permission_name: "waiting",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -72,6 +73,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Danh sách khám bệnh",
     permission_id: null,
+    permission_name: "exams",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -80,6 +82,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Lập phiếu khám",
     permission_id: null,
+    permission_name: "records",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -88,6 +91,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Danh sách bệnh nhân (trong ngày)",
     permission_id: null,
+    permission_name: "patients",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -96,6 +100,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Hóa đơn (trong ngày)",
     permission_id: null,
+    permission_name: "invoicez",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -104,6 +109,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Quản lí bệnh nhân",
     permission_id: null,
+    permission_name: "all_patients",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -112,6 +118,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Quản lí thuốc",
     permission_id: null,
+    permission_name: "drugs",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -120,6 +127,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Quản lí hóa đơn",
     permission_id: null,
+    permission_name: "invoice",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -128,6 +136,7 @@ const initialRows: GridRowsProp = [
     id: randomId(),
     permission: "Báo cáo",
     permission_id: null,
+    permission_name: "reports",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -199,10 +208,11 @@ export default function PermissionTable() {
   ): GridRowsProp => {
     return initialRows.map((row) => {
       const matched = apiPermission.find(
-        (item) => item.permission_id === row.permission_id
+        (item) => item.permission === row.permission_name
       );
       return {
         ...row,
+        permission_id: matched?.permission_id,
         can_create: matched?.can_create || false,
         can_read: matched?.can_read || false,
         can_update: matched?.can_update || false,
@@ -252,18 +262,18 @@ export default function PermissionTable() {
       const patientId = rows.find((row) => row.id === id)?.patientId;
       console.log("patientId", patientId);
       try {
-        const res = await deletePatient(patientId);
-        if (res) {
-          toast.success("Xóa bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-        }
+        // const res = await deletePatient(patientId);
+        // if (res) {
+        //   toast.success("Xóa bệnh nhân thành công", {
+        //     position: "bottom-right",
+        //     autoClose: 2000,
+        //     hideProgressBar: false,
+        //     closeOnClick: true,
+        //     pauseOnHover: true,
+        //     draggable: true,
+        //     progress: undefined,
+        //   });
+        // }
       } catch (err: any) {
         console.error("API request failed:", err);
         if (err.name === "TypeError") {
@@ -303,14 +313,19 @@ export default function PermissionTable() {
         ...(newRow as Permission),
         isNew: false,
       };
+      const selectedRoleId = Number(role);
+      const selectedRole = roles.find(
+        (r) => r.role_id === selectedRoleId
+      )?.role_name;
       const data: Permission = {
         permission_id: updatedRow.permission_id,
         can_create: updatedRow.can_create,
         can_read: updatedRow.can_read,
         can_update: updatedRow.can_update,
         can_delete: false,
-        role: role,
+        role: selectedRole,
       };
+      console.log(">>>>>>>>", data);
       try {
         if (permissionUser && permissionUser.accessToken) {
           const res = await updatePermissionByRole(
@@ -325,8 +340,17 @@ export default function PermissionTable() {
               closeOnClick: true,
               pauseOnHover: true,
               draggable: true,
-              progress: undefined,
             });
+          else {
+            toast.error("Cập nhật thất bại", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+          }
         }
       } catch (err: any) {
         console.error("API request failed:", err);
@@ -347,20 +371,20 @@ export default function PermissionTable() {
 
   const handleSetRole = async (e: SelectChangeEvent) => {
     try {
-      if (permissionUser && permissionUser.accessToken) {
+      const selectedRoleId = Number(e.target.value);
+      const selectedRole = roles.find(
+        (r) => r.role_id === selectedRoleId
+      )?.role_name;
+
+      if (permissionUser && permissionUser.accessToken && selectedRole) {
         const res = await getAllPermissionByRole(
           permissionUser?.accessToken,
-          permissionUser.selected_role
+          selectedRole
         );
         const dataPermission = mergePermission(initialRows, res.permissions);
-        // const dataWithId = res.data.map((item: Permission, index: number) => ({
-        //   ...item,
-        //   id: id + index,
-        // }));
         setRows(dataPermission);
         setRole(e.target.value);
         console.log("data: ", dataPermission);
-        // setId(id + res.data.length);
       }
     } catch (err: unknown) {
       console.log("Err", err);

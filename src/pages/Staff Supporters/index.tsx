@@ -35,19 +35,32 @@ import {
   initialPatient,
   updatePatient,
 } from "@/api/apiPatients";
-import { Patient } from "@/types";
+import { Patient, Role, Supporter } from "@/types";
 import { toast } from "react-toastify";
 import { Autocomplete, Chip, TextField } from "@mui/material";
+import {
+  changeUserRole,
+  createSupporter,
+  getAllSupporters,
+  updateStaff,
+} from "@/api/apiStaff";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { getAllRoles } from "@/api/apiRole";
 ////////////
 interface UserRow {
   id: number;
   name: string;
-  role: string[]; // mỗi ô chứa mảng các vai trò
+  roleUpdate: string[]; // mỗi ô chứa mảng các vai trò
 }
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
+
+interface CellRole {
+  roles: string[]
+}
+// const roles = ["Market", "Finance", "Development"];
+// const randomRole = () => {
+//   return randomArrayItem(roles);
+// };
 
 const initialRows: GridRowsProp = [
   {
@@ -55,7 +68,7 @@ const initialRows: GridRowsProp = [
     name: randomTraderName(),
     age: 25,
     joinDate: randomCreatedDate(),
-    role: randomRole(),
+    //role: randomRole(),
   },
 ];
 
@@ -78,9 +91,14 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
       ...oldRows,
       {
         id,
+        username: "",
         fullName: "",
-        role: [],
+        email: "",
+        phoneNumber: "",
+        password: "",
+        staffTitle: "",
         isNew: true,
+        roles: [],
       },
     ]);
     setRowModesModel((oldModel) => ({
@@ -111,22 +129,27 @@ export default function StaffSupporters() {
 
   const [id, setId] = useState<number>(1);
 
-  const rowsMock = [
-    { id: 1, fullName: "Nguyễn Văn A", role: ["ADMIN", "DOCTOR"] },
-    { id: 2, fullName: "Trần Thị B", role: ["SUPPORTER"] },
-  ];
-  const roleOptions = ["ADMIN", "DOCTOR", "SUPPORTER"];
+  const permissionUser = useSelector(
+    (state: RootState) => state.permission.login.currentUser
+  );
+
+  const [roleOptions, setRoleOptions] = useState<string[]>([]);
 
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchSupporters = async () => {
       try {
-        // const res = await getAllPatients();
-        // const dataWithId = res.data.map((item: Patient, index: number) => ({
-        //   ...item,
-        //   id: id + index,
-        // }));
-        setRows(rowsMock);
-        // setId(id + res.data.length);
+        if (permissionUser && permissionUser.accessToken) {
+          const res = await getAllSupporters(permissionUser?.accessToken);
+          const roleResponse = await getAllRoles(permissionUser.accessToken);
+          const roleNames = roleResponse.map((item: Role) => item.role_name);
+          setRoleOptions(roleNames);
+          const dataWithId = res.map((item: Role, index: number) => ({
+            ...item,
+            id: id + index,
+          }));
+          setRows(dataWithId);
+          setId(id + res.length);
+        }
       } catch (err: any) {
         console.error("Fetch API failed:");
         if (err.name === "TypeError") {
@@ -136,9 +159,9 @@ export default function StaffSupporters() {
         }
       }
     };
-    fetchPatients();
+    fetchSupporters();
   }, []);
- 
+
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
     event
@@ -195,23 +218,40 @@ export default function StaffSupporters() {
     const editedRow = rows.find((row) => row.id === id);
     if (editedRow!.isNew) {
       setRows(rows.filter((row) => row.id !== id));
+    } else {
+      const original = originalRows.find((row) => row.id === id);
+      if (original) {
+        setRows(rows.map((row) => (row.id === id ? original : row)));
+      }
     }
-    else {
-    const original = originalRows.find((row) => row.id === id);
-    if (original) {
-      setRows(rows.map((row) => (row.id === id ? original : row)));
-    }
-  }
   };
-  
+
   const processRowUpdate = async (newRow: GridRowModel) => {
-    const updatedRow: Patient = { ...(newRow as Patient), isNew: false };
+    const updatedRow: Supporter = { ...(newRow as Supporter), isNew: false };
+    console.log(">>>>>>>>>>>: ", updatedRow);
+    const supporter = rows.find(
+      (r) => r.supporterId === updatedRow.supporterId
+    );
+
     try {
-      if (newRow.isNew) {
-        const res = await initialPatient(updatedRow as Patient);
-        updatedRow.patientId = res.patientId;
+      if (newRow.isNew && permissionUser) {
+        if (newRow.role && newRow.roles !== newRow.role) {
+          const roleRes = await changeUserRole(
+            permissionUser.accessToken,
+            updatedRow.username,
+            newRow.role
+          );
+          console.log(roleRes);
+        } else if (newRow.password !== supporter?.password) {
+        }
+        const res = await createSupporter(
+          permissionUser?.accessToken,
+          updatedRow as Supporter
+        );
+        updatedRow.supporterId = res.id;
+        console.log("SUpporter: ", res)
         if (res)
-          toast.success("Thêm bệnh nhân thành công", {
+          toast.success("Thêm nhân viên thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -221,17 +261,30 @@ export default function StaffSupporters() {
             progress: undefined,
           });
       } else {
-        const res = await updatePatient(updatedRow as Patient);
-        if (res)
-          toast.success("Cập nhật bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+        if (permissionUser && permissionUser.accessToken) {
+          if (newRow.role && newRow.roles !== newRow.role) {
+            const roleRes = await changeUserRole(
+              permissionUser.accessToken,
+              updatedRow.username,
+              newRow.role
+            );
+            console.log(roleRes);
+          }
+          const res = await updateStaff(
+            permissionUser?.accessToken,
+            updatedRow as Supporter
+          );
+          if (res)
+            toast.success("Cập nhật nhân viên thành công", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+        }
       }
     } catch (err: any) {
       console.error("API request failed:", err);
@@ -251,6 +304,18 @@ export default function StaffSupporters() {
 
   const columns: GridColDef[] = [
     { field: "fullName", headerName: "Họ và tên", width: 160, editable: true },
+    { field: "email", headerName: "Email", width: 180, editable: true },
+    {
+      field: "phoneNumber",
+      headerName: "Số điện thoại",
+      width: 110,
+      editable: true,
+      type: "string"
+    },
+    { field: "username", headerName: "Tài khoản", width: 110, editable: true },
+    { field: "password", headerName: "Mật khẩu", width: 140, editable: true },
+    { field: "staffTitle", headerName: "Vị trí", width: 100, editable: true },
+
     {
       field: "role",
       headerName: "Vai trò",
@@ -258,13 +323,12 @@ export default function StaffSupporters() {
       sortable: false,
       filterable: false,
       editable: false,
-      renderCell: (params: GridRenderCellParams<string[], UserRow>) => {
-        console.log(params)
-        const { id, field, api } = params;
-        const value: string[] = Array.isArray(params.value) ? params.value : [];
+      renderCell: (params: GridRenderCellParams<CellRole, Supporter>) => {
+        const { id, field, api, row } = params;
+        const value: string[] = Array.isArray(params.value) ? params.value : row.roles ?? [];
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
-        const [inputValue, setInputValue] = React.useState("");
+        const [inputValue, setInputValue] = useState("");
 
         const handleDelete = (roleToDelete: string) => {
           if (!isInEditMode) return;
@@ -282,7 +346,8 @@ export default function StaffSupporters() {
 
         return (
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {value.map((role: string) => (
+            {
+            (value).map((role: string) => (
               <Chip
                 key={role}
                 label={role}
@@ -295,14 +360,15 @@ export default function StaffSupporters() {
               <Autocomplete
                 size="small"
                 disableClearable={false}
-                options={roleOptions.filter((r) => !value.includes(r))}
+                options={roleOptions.filter((r) => !(value).includes(r))}
                 inputValue={inputValue}
-                onInputChange={(_e, newInputValue) =>
-                  setInputValue(newInputValue)
-                }
+                // onInputChange={(_e, newInputValue) =>
+                //   setInputValue(newInputValue);
+                //   setInputValue("")
+                // }
                 onChange={(event, newValue) => {
                   handleAddRole(event, newValue);
-                  setInputValue("");
+                  //setInputValue("");
                 }}
                 renderInput={(params) => (
                   <TextField {...params} variant="standard" size="small" />

@@ -22,28 +22,31 @@ import {
   GridRowModel,
   GridRowEditStopReasons,
   GridSlotProps,
+  GridRenderCellParams,
 } from "@mui/x-data-grid";
 import {
   randomCreatedDate,
   randomTraderName,
   randomId,
-  randomArrayItem,
 } from "@mui/x-data-grid-generator";
-import {
-  deletePatient,
-  getAllPatients,
-  initialPatient,
-  updatePatient,
-} from "@/api/apiPatients";
-import { Patient } from "@/types";
+import { deletePatient } from "@/api/apiPatients";
+import { Doctor, Role } from "@/types";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
-import BasicDatePicker from "@/components/layouts/components/DatePicker";
+import { Autocomplete, Chip, TextField } from "@mui/material";
+import { changeUserRole, createDoctor, getAllDoctors, updateStaff } from "@/api/apiStaff";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { getAllRoles } from "@/api/apiRole";
 ////////////
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
+interface UserRow {
+  id: number;
+  name: string;
+  roleUpdate: string[];
+}
+
+interface CellRole {
+  roles: string[];
+}
 
 const initialRows: GridRowsProp = [
   {
@@ -51,35 +54,6 @@ const initialRows: GridRowsProp = [
     name: randomTraderName(),
     age: 25,
     joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 36,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 19,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 28,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 23,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
   },
 ];
 
@@ -102,13 +76,16 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
       ...oldRows,
       {
         id,
+        username: "",
         fullName: "",
-        gender: "",
-        yearOfBirth: "",
-        address: "",
+        email: "",
         phoneNumber: "",
-        residentalIdentity: "",
+        password: "",
+        specialization: "",
+        qualification: "",
+        yearsOfExperience: 0,
         isNew: true,
+        roles: [],
       },
     ]);
     setRowModesModel((oldModel) => ({
@@ -134,18 +111,32 @@ export default function StaffDoctors() {
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
   );
+
+  const [originalRows, setOriginalRows] = useState<UserRow[]>([]);
+
   const [id, setId] = useState<number>(1);
-  const navigate = useNavigate();
+
+  const permissionUser = useSelector(
+    (state: RootState) => state.permission.login.currentUser
+  );
+
+  const [roleOptions, setRoleOptions] = useState<string[]>([]);
+
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchDoctors = async () => {
       try {
-        const res = await getAllPatients();
-        const dataWithId = res.data.map((item: Patient, index: number) => ({
-          ...item,
-          id: id + index,
-        }));
-        setRows(dataWithId);
-        setId(id + res.data.length);
+        if (permissionUser && permissionUser.accessToken) {
+          const res = await getAllDoctors(permissionUser?.accessToken);
+          const roleResponse = await getAllRoles(permissionUser.accessToken);
+          const roleNames = roleResponse.map((item: Role) => item.role_name);
+          setRoleOptions(roleNames);
+          const dataWithId = res.map((item: Role, index: number) => ({
+            ...item,
+            id: id + index,
+          }));
+          setRows(dataWithId);
+          setId(id + res.length);
+        }
       } catch (err: any) {
         console.error("Fetch API failed:");
         if (err.name === "TypeError") {
@@ -155,9 +146,9 @@ export default function StaffDoctors() {
         }
       }
     };
-    fetchPatients();
+    fetchDoctors();
   }, []);
-  // console.log(rows);
+
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
     event
@@ -168,6 +159,7 @@ export default function StaffDoctors() {
   };
 
   const handleEditClick = (id: GridRowId) => () => {
+    setOriginalRows([...rows] as UserRow[]);
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
   };
 
@@ -213,46 +205,40 @@ export default function StaffDoctors() {
     const editedRow = rows.find((row) => row.id === id);
     if (editedRow!.isNew) {
       setRows(rows.filter((row) => row.id !== id));
+    } else {
+      const original = originalRows.find((row) => row.id === id);
+      if (original) {
+        setRows(rows.map((row) => (row.id === id ? original : row)));
+      }
     }
   };
-  const checkIdentity = (identity: string) => {
-    const regex = /^\d{12}$/;
-    return regex.test(identity);
-  };
-  const chekckPhoneNumber = (phoneNumber: string) => {
-    return /^0\d{9}$/.test(phoneNumber);
-  };
+
   const processRowUpdate = async (newRow: GridRowModel) => {
-    if (!checkIdentity(newRow?.residentalIdentity)) {
-      toast.error("CMND/CCCD không hợp lệ", {
-        position: "bottom-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
-      throw new Error("Invalid CCCD");
-    } else if (!chekckPhoneNumber(newRow?.phoneNumber)) {
-      toast.error("Số điện thoại không hợp lệ", {
-        position: "bottom-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
-      throw new Error("Invalid phone number");
-    }
-    const updatedRow: Patient = { ...(newRow as Patient), isNew: false };
+    const updatedRow: Doctor = { ...(newRow as Doctor), isNew: false };
+    console.log(">>>>>>>>>>>: ", updatedRow);
+    const doctor = rows.find(
+      (r) => r.doctorId === updatedRow.doctorId
+    );
+
     try {
-      if (newRow.isNew) {
-        const res = await initialPatient(updatedRow as Patient);
-        updatedRow.patientId = res.patientId;
+      if (newRow.isNew && permissionUser) {
+        if (newRow.role && newRow.roles !== newRow.role) {
+          const roleRes = await changeUserRole(
+            permissionUser.accessToken,
+            updatedRow.username,
+            newRow.role
+          );
+          console.log(roleRes);
+        } else if (newRow.password !== doctor?.password) {
+        }
+        const res = await createDoctor(
+          permissionUser?.accessToken,
+          updatedRow as Doctor
+        );
+        updatedRow.doctorId = res.id;
+        console.log("SUpporter: ", res);
         if (res)
-          toast.success("Thêm bệnh nhân thành công", {
+          toast.success("Thêm bác sĩ thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -262,17 +248,30 @@ export default function StaffDoctors() {
             progress: undefined,
           });
       } else {
-        const res = await updatePatient(updatedRow as Patient);
-        if (res)
-          toast.success("Cập nhật bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+        if (permissionUser && permissionUser.accessToken) {
+          if (newRow.role && newRow.roles !== newRow.role) {
+            const roleRes = await changeUserRole(
+              permissionUser.accessToken,
+              updatedRow.username,
+              newRow.role
+            );
+            console.log(roleRes);
+          }
+          const res = await updateStaff(
+            permissionUser?.accessToken,
+            updatedRow as Doctor
+          );
+          if (res)
+            toast.success("Cập nhật bác sĩ thành công", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+        }
       }
     } catch (err: any) {
       console.error("API request failed:", err);
@@ -289,62 +288,112 @@ export default function StaffDoctors() {
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
-  const handleExaminate = (id: GridRowId) => {
-    const patient = rows.find((row) => row.id === id);
-    console.log(patient);
-    navigate("/records", { state: { patient } });
-  };
+
   const columns: GridColDef[] = [
     { field: "fullName", headerName: "Họ và tên", width: 160, editable: true },
-    {
-      field: "gender",
-      headerName: "Giới tính",
-      width: 80,
-      align: "left",
-      headerAlign: "left",
-      editable: true,
-      type: "singleSelect",
-      valueOptions: [
-        {
-          value: true,
-          label: "Nam",
-        },
-        {
-          value: false,
-          label: "Nữ",
-        },
-      ],
-      valueGetter: (param, row) => {
-        return row.gender;
-      },
-    },
-    {
-      field: "yearOfBirth",
-      headerName: "Năm sinh",
-      type: "string",
-      width: 80,
-      editable: true,
-    },
-    {
-      field: "address",
-      headerName: "Địa chỉ",
-      width: 100,
-      editable: true,
-      type: "string",
-    },
+    { field: "email", headerName: "Email", width: 180, editable: true },
     {
       field: "phoneNumber",
       headerName: "Số điện thoại",
-      width: 160,
+      width: 110,
       editable: true,
       type: "string",
     },
+    { field: "username", headerName: "Tài khoản", width: 110, editable: true },
+    { field: "password", headerName: "Mật khẩu", width: 140, editable: true },
+    { field: "specialization", headerName: "Chuyên khoa", width: 100, editable: true },
+    { field: "qualification", headerName: "Bằng cấp", width: 100, editable: true },
+    { field: "yearsOfExperience", headerName: "Năm kinh nghiệm", width: 100, editable: true },
     {
-      field: "residentalIdentity",
-      headerName: "CMND/CCCD",
-      width: 120,
-      editable: true,
-      type: "string",
+      field: "role",
+      headerName: "Vai trò",
+      width: 500,
+      sortable: false,
+      filterable: false,
+      editable: false,
+      renderCell: (params: GridRenderCellParams<CellRole, Doctor>) => {
+        const { id, field, api, row } = params;
+        const value: string[] = Array.isArray(params.value)
+          ? params.value
+          : (row.roles ?? []);
+        const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
+
+        const [inputValue, setInputValue] = useState("");
+
+        const handleDelete = (roleToDelete: string) => {
+          if (!isInEditMode) return;
+          const updated = value.filter((r) => r !== roleToDelete);
+          api.updateRows([{ id, [field]: updated }]);
+        };
+
+        const handleAddRole = (_event: any, newValue: string | null) => {
+          if (!isInEditMode) return;
+          if (newValue && !value.includes(newValue)) {
+            const updated = [...value, newValue];
+            api.updateRows([{ id, [field]: updated }]);
+          }
+        };
+
+        return (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            {value.map((role: string) => (
+              <Chip
+                key={role}
+                label={role}
+                size="small"
+                onDelete={isInEditMode ? () => handleDelete(role) : undefined}
+                deleteIcon={isInEditMode ? <CancelIcon /> : undefined}
+              />
+            ))}
+            {isInEditMode && (
+              <Autocomplete
+                size="small"
+                disableClearable={false}
+                options={roleOptions.filter((r) => !value.includes(r))}
+                inputValue={inputValue}
+                // onInputChange={(_e, newInputValue) =>
+                //   setInputValue(newInputValue);
+                //   setInputValue("")
+                // }
+                onChange={(event, newValue) => {
+                  handleAddRole(event, newValue);
+                  //setInputValue("");
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} variant="standard" size="small" />
+                )}
+                sx={{ width: 100 }}
+                slotProps={{
+                  popper: {
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: {
+                          offset: [0, 4],
+                        },
+                      },
+                    ],
+                    sx: {
+                      width: 200,
+                      maxHeight: 250,
+                      overflowY: "auto",
+                      zIndex: 1300,
+                    },
+                  },
+                  listbox: {
+                    sx: {
+                      fontSize: "0.75rem",
+                      paddingY: 0.5,
+                      alignItems: "center",
+                      textAlign: "center",
+                    },
+                  },
+                }}
+              />
+            )}
+          </Box>
+        );
+      },
     },
     {
       field: "actions",
@@ -387,12 +436,6 @@ export default function StaffDoctors() {
             icon={<DeleteIcon />}
             label="Delete"
             onClick={handleDeleteClick(id)}
-            color="inherit"
-          />,
-          <GridActionsCellItem
-            icon={<AssignmentAddIcon />}
-            label="Khám bệnh"
-            onClick={() => handleExaminate(id)}
             color="inherit"
           />,
         ];

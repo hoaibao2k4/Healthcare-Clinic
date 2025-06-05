@@ -6,14 +6,14 @@ import { User } from "@/types";
 import { loginPermission } from "@/api/apiAdmin";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 
 const style = {
   position: "absolute",
   top: "50%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  width: 400,
+  width: 600,
+  height: 300,
   bgcolor: "background.paper",
   boxShadow: 24,
   p: 4,
@@ -31,6 +31,8 @@ const styleButton = {
   paddingRight: "20px",
   borderRadius: "4px",
   color: "white",
+  ml: 1,
+  mr: 1
 };
 interface RoleProps {
   user: User | null;
@@ -78,8 +80,8 @@ export default function RoleModal({ user }: RoleProps) {
         aria-describedby="modal-modal-description"
       >
         <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Danh sách các quyền
+          <Typography id="modal-modal-title" variant="h6" component="h2" >
+            Danh sách vai trò
           </Typography>
           {user?.available_roles.map((role, index) => (
             <Typography

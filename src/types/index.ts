@@ -6,3 +6,5 @@ export * from './record'
 export * from './invoice'
 export * from "./roles"
 export * from './permission'
+export * from './supporter'
+export * from './doctor'
