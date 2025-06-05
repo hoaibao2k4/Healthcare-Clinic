@@ -44,5 +44,6 @@ const publicRoutes = [
   { path: "/admin/role", component: RoleTable, layout: DefaultLayout },
 
 
+
 ];
 export { publicRoutes };

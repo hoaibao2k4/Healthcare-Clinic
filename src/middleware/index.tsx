@@ -15,11 +15,16 @@ export default function PrivateRouter({ children }: PrivateRouterProps) {
   );
   const location = useLocation();
 
-  if (!user || !permission) return <Navigate to="/login" />;
+  if (!user) {
+    if (!permission) return <Navigate to="/login" />;
+  }
 
   const currentSegment = location.pathname.split("/")[1] || "dashboard";
 
-  if (currentSegment.includes("dashboard") || currentSegment.includes("integrations"))
+  if (
+    currentSegment.includes("dashboard") ||
+    currentSegment.includes("integrations")
+  )
     return children;
   const adminAllowedSegments = [
     "staff",
@@ -30,13 +35,13 @@ export default function PrivateRouter({ children }: PrivateRouterProps) {
   ];
 
   if (
-    permission.selected_role === "ADMIN" &&
+    permission?.selected_role === "ADMIN" &&
     adminAllowedSegments.includes(currentSegment)
   ) {
     return children;
   }
 
-  const isAllowed = permission.permissionList.some((item: Permission) => {
+  const isAllowed = permission?.permissionList.some((item: Permission) => {
     return (
       item.permission === currentSegment &&
       (item.can_read || item.can_create || item.can_update)
