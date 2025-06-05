@@ -29,14 +29,8 @@ import {
 } from "@mui/x-data-grid-generator";
 import { toast } from "react-toastify";
 
-import {
-  deleteDrugUnit,
-  getAllDrugUnits,
-  initialDrugUnit,
-  updateDrugUnit,
-} from "@/api/apiDrug";
-import { DrugUnit } from "@/types/drug";
-import { createRole, getAllRoles } from "@/api/apiRole";
+import { deleteDrugUnit } from "@/api/apiDrug";
+import { createRole, deleteRole, getAllRoles } from "@/api/apiRole";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { Role } from "@/types";
@@ -180,20 +174,21 @@ export default function RoleTable() {
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
       setRows(rows.filter((row) => row.id !== id));
-      const unitId = rows.find((row) => row.id === id)?.unitId;
-      console.log("unitId", unitId);
+      const roleId = rows.find((row) => row.id === id)?.role_id;
+      console.log("roleId", roleId);
       try {
-        const res = await deleteDrugUnit(unitId);
-        if (res) {
-          toast.success("Xóa thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+        if (permissionUser && permissionUser.accessToken) {
+          const res = await deleteRole(roleId, permissionUser?.accessToken);
+          if (res) {
+            toast.success("Xóa thành công", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+          }
         }
       } catch (err: any) {
         console.error("API request failed:", err);
@@ -221,7 +216,11 @@ export default function RoleTable() {
     const updatedRow: Role = { ...(newRow as Role), isNew: false };
     try {
       if (permissionUser && permissionUser.accessToken) {
-        const res = await createRole(permissionUser?.accessToken, updatedRow.role_name, updatedRow.description);
+        const res = await createRole(
+          permissionUser?.accessToken,
+          updatedRow.role_name,
+          updatedRow.description
+        );
         updatedRow.role_id = res.role_id;
         if (res)
           toast.success("Thêm vai trò thành công", {
@@ -233,20 +232,7 @@ export default function RoleTable() {
             draggable: true,
             progress: undefined,
           });
-      } 
-      // else {
-      //   const res = await updateDrugUnit(updatedRow as DrugUnit);
-      //   if (res)
-      //     toast.success("Cập nhật bệnh thành công", {
-      //       position: "bottom-right",
-      //       autoClose: 2000,
-      //       hideProgressBar: false,
-      //       closeOnClick: true,
-      //       pauseOnHover: true,
-      //       draggable: true,
-      //       progress: undefined,
-      //     });
-      // }
+      }
     } catch (err: any) {
       console.error("API request failed:", err);
       if (err.name === "TypeError") {

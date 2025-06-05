@@ -13,6 +13,7 @@ import PermissionTable from "@/pages/Permission Table";
 import PatientRecords from "@/pages/Records";
 import RevenuePage from "@/pages/Revenue";
 import RoleTable from "@/pages/Role Table";
+import SettingsPage from "@/pages/Settings";
 import StaffDoctors from "@/pages/Staff Doctors";
 import StaffSupporters from "@/pages/Staff Supporters";
 
@@ -42,6 +43,9 @@ const publicRoutes = [
   },
   { path: "/admin/permission", component: PermissionTable, layout: DefaultLayout },
   { path: "/admin/role", component: RoleTable, layout: DefaultLayout },
+  { path: "/integrations", component: SettingsPage, layout: DefaultLayout },
+
+
 
 
 ];

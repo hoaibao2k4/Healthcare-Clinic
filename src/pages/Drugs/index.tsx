@@ -7,6 +7,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -20,6 +21,7 @@ import {
   GridRowModel,
   GridRowEditStopReasons,
   GridSlotProps,
+  GridFilterModel,
 } from "@mui/x-data-grid";
 import {
   randomCreatedDate,
@@ -135,6 +137,7 @@ export default function DrugsPage() {
   );
   const [id, setId] = useState<number>(1);
   const [drugUnits, setDrugUnits] = useState<DrugUnit[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   useEffect(() => {
     const fetchDrug = async () => {
       try {
@@ -158,6 +161,18 @@ export default function DrugsPage() {
     };
     fetchDrug();
   }, []);
+  //FilterModel tìm kiếm theo tên thuốc
+  const filterModel: GridFilterModel = {
+    items: searchTerm
+      ? [
+          {
+            field: "drugName",
+            operator: "contains",
+            value: searchTerm,
+          },
+        ]
+      : [],
+  };
   // console.log(rows);
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
@@ -221,7 +236,9 @@ export default function DrugsPage() {
     const updatedRows: Drug = {
       ...(newRow as Drug),
       isNew: false,
-      expirationDate: (newRow.expirationDate as Date).toISOString().split('T')[0]
+      expirationDate: (newRow.expirationDate as Date)
+        .toISOString()
+        .split("T")[0],
     };
     const drugUnit = drugUnitApi.data[updatedRows.unitId! - 1];
     console.log(drugUnit);
@@ -377,6 +394,32 @@ export default function DrugsPage() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
+      {/* Thêm search box */}
+      <Box
+        display="flex"
+        alignItems="center"
+        bgcolor="#f4f6f8"
+        borderRadius={2}
+        px={2}
+        py={1}
+        width={300}
+        mb={2}
+        boxShadow={1}
+      >
+        <SearchIcon sx={{ color: "gray", marginRight: 1 }} />
+        <input
+          placeholder="Tìm kiếm tên thuốc"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            flex: 1,
+            fontSize: "16px",
+          }}
+        />
+      </Box>
       <Box
         sx={{
           height: 500,
@@ -392,6 +435,7 @@ export default function DrugsPage() {
         <DataGrid
           rows={rows}
           columns={columns}
+          filterModel={filterModel}
           editMode="row"
           rowModesModel={rowModesModel}
           onRowModesModelChange={handleRowModesModelChange}

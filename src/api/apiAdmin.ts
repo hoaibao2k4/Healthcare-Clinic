@@ -9,6 +9,7 @@ import {
   permissionSuccess,
 } from "@/redux/permissionSlice";
 import { toast } from "react-toastify";
+import { UserPermission } from "@/types";
 export const adminLogin = async (
   username: string,
   password: string,
@@ -95,6 +96,50 @@ export const loginPermission = async (
     return res.data;
   } catch (error: any) {
     dispatch(permissionFail());
+    if (axios.isAxiosError(error)) {
+      return (
+        error.response?.data || error.message,
+        error.response?.status || "No status"
+      );
+    } else if (error instanceof Error) {
+      return "Request Err: " + error.message;
+    } else {
+      return "Unknown error: " + error;
+    }
+  }
+};
+
+export const getNewRefreshToken = async (refreshToken: string) => {
+  try {
+    const res = await response.get(`/api/auth/refresh`, {
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return (
+        error.response?.data || error.message,
+        error.response?.status || "No status"
+      );
+    } else if (error instanceof Error) {
+      return "Request Err: " + error.message;
+    } else {
+      return "Unknown error: " + error;
+    }
+  }
+};
+
+export const getNewAccessToken = async (refreshToken: string) => {
+  try {
+    const res = await response.get(`/api/auth/access`, {
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    });
+    return res.data;
+  } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       return (
         error.response?.data || error.message,

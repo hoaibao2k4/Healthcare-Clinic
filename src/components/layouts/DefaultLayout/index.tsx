@@ -29,6 +29,7 @@ import MedicationLiquidIcon from "@mui/icons-material/MedicationLiquid";
 import VaccinesIcon from "@mui/icons-material/Vaccines";
 import SanitizerIcon from "@mui/icons-material/Sanitizer";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import { Permission } from "@/types";
 
 type NavigationPageWithPermission = {
   kind?: "page";
@@ -197,27 +198,45 @@ const NAVIGATION: NavigationItemWithPermission[] = [
 
 function filterNavigationByPermission(
   items: NavigationItemWithPermission[],
-  userPermissions: string[]
+  userPermissions: Permission[],
+  role: string
 ): Navigation {
   return items
     .map((item) => {
       if (item.kind === "header" || item.kind === "divider") return item;
-
-      // Nếu có permission yêu cầu mà user không có -> loại
+      if (item.segment === "dashboard" || item.segment === "integrations")
+        return item;
       if (
-        item.permissions &&
-        !item.permissions.some((p) => userPermissions.includes(p))
+        role === "ADMIN" &&
+        ( item.segment === "staff" ||
+          item.segment === "admin" ||
+          item.segment === "invoice" ||
+          item.segment === "drugs" ||
+          item.segment === "reports" )
       ) {
-        return null;
+        return {
+          ...item,
+          ...(item.children ? { children: item.children } : {}),
+        };
       }
-      if (!item.permissions) return null;
 
-      const children = item.children
-        ? filterNavigationByPermission(item.children, userPermissions)
-        : undefined;
+      if (item.segment) {
+        const matchedPermission = userPermissions.find(
+          (p) =>
+            p.permission === item.segment &&
+            (p.can_create || p.can_read || p.can_update)
+        );
 
-      const { permissions, ...rest } = item;
-      return { ...rest, ...(children ? { children } : {}) };
+        if (matchedPermission) {
+          const { permissions, ...rest } = item;
+          return {
+            ...rest,
+            ...(item.children ? { children: item.children } : {}),
+          };
+        }
+      }
+
+      return null;
     })
     .filter(Boolean) as Navigation;
 }
@@ -305,10 +324,15 @@ export default function DefaultLayout({
     };
   }, [user]);
   //
-  const navigation = filterNavigationByPermission(NAVIGATION, [
-    "ADMIN",
-    "ACCESS_DASHBOARD",
-  ]);
+  let navigation;
+
+  if (permission) {
+    navigation = filterNavigationByPermission(
+      NAVIGATION,
+      permission.permissionList,
+      permission.selected_role
+    );
+  }
 
   return (
     <AppProvider
