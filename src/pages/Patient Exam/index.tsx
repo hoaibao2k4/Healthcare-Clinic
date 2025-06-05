@@ -8,7 +8,7 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import AssignmentAddIcon from "@mui/icons-material/AssignmentAdd";
-
+import SearchIcon from "@mui/icons-material/Search";
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -22,6 +22,7 @@ import {
   GridRowModel,
   GridRowEditStopReasons,
   GridSlotProps,
+  GridFilterModel,
 } from "@mui/x-data-grid";
 import {
   randomCreatedDate,
@@ -131,6 +132,7 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 
 export default function PatientExam() {
   const [rows, setRows] = React.useState(initialRows);
+  const [searchTerm, setSearchTerm] = useState(""); //thêm search
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
   );
@@ -157,6 +159,19 @@ export default function PatientExam() {
     };
     fetchPatients();
   }, []);
+  //Thêm filter chỗ Search Box
+  const filterModel: GridFilterModel = {
+    items: searchTerm
+      ? [
+          {
+            field: "fullName",
+            operator: "contains",
+            value: searchTerm,
+          },
+        ]
+      : [],
+  };
+
   // console.log(rows);
   const handleRowEditStop: GridEventListener<"rowEditStop"> = (
     params,
@@ -402,7 +417,34 @@ export default function PatientExam() {
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <div className="flex pb-4">
+      <div className="flex justify-between items-center pb-4">
+        {/* thêm search box bên trái */}
+        <Box
+          display="flex"
+          alignItems="center"
+          bgcolor="#f4f6f8"
+          borderRadius={2}
+          px={2}
+          py={1}
+          width={300}
+          boxShadow={1}
+        >
+          <SearchIcon sx={{ color: "gray", marginRight: 1 }} />
+          <input
+            placeholder="Tìm kiếm tên bệnh nhân"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              flex: 1,
+              fontSize: "16px",
+            }}
+          />
+        </Box>
+
+        {/*Sửa ngày khám bên phải */}
         <BasicDatePicker />
       </div>
       <div>
@@ -421,6 +463,7 @@ export default function PatientExam() {
           <DataGrid
             rows={rows}
             columns={columns}
+            filterModel={filterModel}
             editMode="row"
             rowModesModel={rowModesModel}
             onRowModesModelChange={handleRowModesModelChange}
