@@ -7,7 +7,11 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
-import { TextField } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import { TextField, MenuItem, Typography } from "@mui/material";
 import {
   GridRowsProp,
   GridRowModesModel,
@@ -22,93 +26,41 @@ import {
   GridRowEditStopReasons,
   GridSlotProps,
 } from "@mui/x-data-grid";
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomId,
-  randomArrayItem,
-} from "@mui/x-data-grid-generator";
 import { toast } from "react-toastify";
-
 import {
-  deleteDrugUnit,
-  initialDrugUnit,
-  updateDrugUnit,
-} from "@/api/apiDrug";
-import { DrugUnit } from "@/types/drug";
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 import { getRevenueReport } from "@/api/apiReport";
-import { DayReport } from "@/types";
-////////////
-const roles = ["Market", "Finance", "Development"];
-const randomRole = () => {
-  return randomArrayItem(roles);
-};
-
-const initialRows: GridRowsProp = [
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 25,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 36,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 19,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 28,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-  {
-    id: randomId(),
-    name: randomTraderName(),
-    age: 23,
-    joinDate: randomCreatedDate(),
-    role: randomRole(),
-  },
-];
-
-declare module "@mui/x-data-grid" {
-  interface ToolbarPropsOverrides {
-    setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
-    setRowModesModel: (
-      newModel: (oldModel: GridRowModesModel) => GridRowModesModel
-    ) => void;
-  }
-}
-////////////
+import { DayReport, Revenue } from "@/types/report";
 
 function EditToolbar(props: GridSlotProps["toolbar"]) {
   const { setRows, setRowModesModel } = props;
 
   const handleClick = () => {
-    const id = Math.floor(Math.random() * 100);
+    const id = Math.floor(Math.random() * 100).toString();
     setRows((oldRows) => [
       ...oldRows,
       {
         id,
-        unitName: "",
-        description: "",
+        date: "",
+        numberOfPatients: 0,
+        revenue: 0,
+        ratio: 0,
         isNew: true,
       },
     ]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
+      [id]: { mode: GridRowModes.Edit, fieldToFocus: "date" },
     }));
   };
 
@@ -125,134 +77,235 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 }
 
 export default function RevenuePage() {
-  const [rows, setRows] = React.useState(initialRows);
-  const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
-    {}
-  );
-  const [id, setId] = useState<number>(1);
-  useEffect(() => {
-    const fetchRevenueReport = async () => {
-      try {
-        const res = await getRevenueReport(4, "2025");
-        console.log(res.data)
-        const dataWithId = res.data?.dayReports?.map((item: DayReport, index: number) => ({
-          ...item,
-          id: id + index,
-        }));
-        setRows(dataWithId);
-        setId(id + res.data.length);
-      } catch (err: any) {
-        console.error("Fetch API failed:");
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
-        }
-      }
-    };
-    fetchRevenueReport();
-  }, []);
-  // console.log(rows);
-  const handleRowEditStop: GridEventListener<"rowEditStop"> = (
-    params,
-    event
-  ) => {
-    if (params.reason === GridRowEditStopReasons.rowFocusOut) {
-      event.defaultMuiPrevented = true;
-    }
-  };
+  const today = new Date();
+  const [month, setMonth] = useState<number>(today.getMonth() + 1);
+  const [year, setYear] = useState<number>(today.getFullYear());
+  const [rows, setRows] = useState<DayReport[]>([]);
+  const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+  const [showChart, setShowChart] = useState<boolean>(true);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
 
-  const handleEditClick = (id: GridRowId) => () => {
-    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
-  };
-
-  const handleSaveClick = (id: GridRowId) => () => {
-    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
-  };
-
-  const handleDeleteClick = (id: GridRowId) => {
-    return async () => {
-      setRows(rows.filter((row) => row.id !== id));
-      const unitId = rows.find((row) => row.id === id)?.unitId;
-      console.log("unitId", unitId);
-      try {
-        const res = await deleteDrugUnit(unitId);
-        if (res) {
-          toast.success("Xóa thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-        }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
-        }
-      }
-    };
-  };
-
-  const handleCancelClick = (id: GridRowId) => () => {
-    setRowModesModel({
-      ...rowModesModel,
-      [id]: { mode: GridRowModes.View, ignoreModifications: true },
-    });
-
-    const editedRow = rows.find((row) => row.id === id);
-    if (editedRow!.isNew) {
-      setRows(rows.filter((row) => row.id !== id));
-    }
-  };
-  const processRowUpdate = async (newRow: GridRowModel) => {
-    const updatedRow: DrugUnit = { ...(newRow as DrugUnit), isNew: false };
+  const handleFetch = async (showToast = true) => {
     try {
-      if (newRow.isNew) {
-        const res = await initialDrugUnit(updatedRow as DrugUnit);
-        updatedRow.unitId = res.unitId;
-        if (res)
-          toast.success("Thêm bệnh thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
-      } else {
-        const res = await updateDrugUnit(updatedRow as DrugUnit);
-        if (res)
-          toast.success("Cập nhật bệnh thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+      const res: Revenue = await getRevenueReport(month, year.toString());
+      console.log("API response: ", res);
+
+      const dayReports = res?.dayReports || [];
+      console.log("dayReports API:", dayReports);
+
+      //
+      // const calculatedTotal = dayReports.reduce(
+      //   (acc, item) => acc + (item.revenue || 0),
+      //   0
+      // );
+
+      // const formatted = dayReports.map((item, index) => {
+      //   const ratio = calculatedTotal > 0 ? item.revenue / calculatedTotal : 0;
+
+      //   return {
+      //     ...item,
+      //     id: (index + 1).toString(),
+      //     ratio,
+      //   };
+      // });
+
+      // formatted.sort(
+      //   (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      // );
+
+      // setRows(formatted);
+      // setTotalRevenue(calculatedTotal);
+
+      //
+
+      const formatted = dayReports.map((item, index) => ({
+        ...item,
+        id: (index + 1).toString(),
+      }));
+
+      setRows(formatted);
+      setTotalRevenue(res?.totalRevenue || 0);
+
+      //
+
+      if (formatted.length === 0 && showToast) {
+        toast.info("No revenue data found", {
+          position: "bottom-right",
+
+          autoClose: 2000,
+
+          hideProgressBar: false,
+
+          closeOnClick: true,
+
+          pauseOnHover: true,
+
+          draggable: true,
+
+          progress: undefined,
+        });
       }
     } catch (err: any) {
       console.error("API request failed:", err);
+
       if (err.name === "TypeError") {
         console.error("Network error or CORS issue:", err.message);
       } else {
         console.error("Unexpected error:", err.message || err);
       }
     }
-    setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
-    return updatedRow;
+  };
+  //
+  // useEffect(() => {
+  //   if (!rows || rows.length === 0) return;
+
+  //   const calculatedTotal = rows.reduce(
+  //     (acc, item) => acc + (item.revenue || 0),
+  //     0
+  //   );
+
+  //   const updatedRows = rows.map((item) => ({
+  //     ...item,
+
+  //     ratio: calculatedTotal > 0 ? item.revenue / calculatedTotal : 0,
+  //   }));
+
+  //   setTotalRevenue(calculatedTotal);
+  //   console.log("Rows updated from local calculation:", updatedRows);
+  //   setRows(updatedRows);
+  // }, [JSON.stringify(rows)]);
+  //
+
+  useEffect(() => {
+    handleFetch(false);
+  }, []);
+
+  const handleEditClick = (id: GridRowId) => {
+    return () => {
+      setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
+    };
+  };
+
+  const handleSaveClick = (id: GridRowId) => {
+    return () => {
+      setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
+    };
+  };
+
+  const handleDeleteClick = (id: GridRowId) => {
+    return async () => {
+      try {
+        setRows((prevRows) => prevRows.filter((row) => row.id !== id));
+
+        toast.success("Đã xóa dòng", {
+          position: "bottom-right",
+
+          autoClose: 2000,
+
+          hideProgressBar: false,
+
+          closeOnClick: true,
+
+          pauseOnHover: true,
+
+          draggable: true,
+
+          progress: undefined,
+        });
+      } catch (err: any) {
+        console.error("Xóa thất bại: ", err);
+        if (err.name === "TypeError") {
+          console.error("Network error or CORS issue:", err.message);
+        } else {
+          console.error("Unexpected error:", err.message || err);
+        }
+      }
+    };
+  };
+
+  const handleCancelClick = (id: GridRowId) => {
+    return () => {
+      setRowModesModel({
+        ...rowModesModel,
+
+        [id]: { mode: GridRowModes.View, ignoreModifications: true },
+      });
+
+      const editedRow = rows.find((row) => row.id === id);
+
+      if (editedRow?.isNew) {
+        setRows(rows.filter((row) => row.id !== id));
+      }
+    };
   };
 
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
+  };
+  const processRowUpdate = (newRow: GridRowModel) => {
+    console.log("Row updated: ", newRow);
+    try {
+      const updatedRow: DayReport = { ...(newRow as DayReport), isNew: false };
+
+      setRows((prevRows) =>
+        prevRows.map((row) => (row.id === newRow.id ? updatedRow : row))
+      );
+
+      toast.success("Đã cập nhật dòng", {
+        position: "bottom-right",
+
+        autoClose: 2000,
+
+        hideProgressBar: false,
+
+        closeOnClick: true,
+
+        pauseOnHover: true,
+
+        draggable: true,
+
+        progress: undefined,
+      });
+
+      return updatedRow;
+    } catch (err: any) {
+      console.error("Cập nhật dòng thất bại:", err);
+
+      if (err.name === "TypeError") {
+        console.error("Network error or CORS issue:", err.message);
+      } else {
+        console.error("Unexpected error:", err.message || err);
+      }
+
+      toast.error("Cập nhật dòng thất bại", {
+        position: "bottom-right",
+
+        autoClose: 2000,
+
+        hideProgressBar: false,
+
+        closeOnClick: true,
+
+        pauseOnHover: true,
+
+        draggable: true,
+
+        progress: undefined,
+      });
+
+      return newRow;
+    }
+  };
+  const setRowsFromGrid = (
+    updater: (oldRows: readonly GridRowModel[]) => readonly GridRowModel[]
+  ) => {
+    setRows((prevRows) => updater(prevRows) as DayReport[]);
+  };
+
+  const setRowModesModelFromGrid = (
+    model: (oldModel: GridRowModesModel) => GridRowModesModel
+  ) => {
+    setRowModesModel(model);
   };
 
   const columns: GridColDef[] = [
@@ -287,100 +340,202 @@ export default function RevenuePage() {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
-      width: 100,
       cellClassName: "actions",
-      getActions: ({ id }) => {
-        const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
-
+      headerName: "Thao tác",
+      width: 100,
+      getActions: (params) => {
+        const isInEditMode =
+          rowModesModel[params.id]?.mode === GridRowModes.Edit;
+        const actions = [];
         if (isInEditMode) {
-          return [
+          actions.push(
             <GridActionsCellItem
               icon={<SaveIcon />}
               label="Save"
               sx={{
                 color: "primary.main",
               }}
-              onClick={handleSaveClick(id)}
+              onClick={handleSaveClick(params.id)}
             />,
             <GridActionsCellItem
               icon={<CancelIcon />}
               label="Cancel"
               className="textPrimary"
-              onClick={handleCancelClick(id)}
+              onClick={handleCancelClick(params.id)}
+              color="inherit"
+            />
+          );
+        } else {
+          actions.push(
+            <GridActionsCellItem
+              icon={<EditIcon />}
+              label="Edit"
+              className="textPrimary"
+              onClick={handleEditClick(params.id)}
               color="inherit"
             />,
-          ];
+            <GridActionsCellItem
+              icon={<DeleteIcon />}
+              label="Delete"
+              onClick={handleDeleteClick(params.id)}
+              color="inherit"
+            />
+          );
         }
-
-        return [
-          <GridActionsCellItem
-            icon={<EditIcon />}
-            label="Edit"
-            className="textPrimary"
-            onClick={handleEditClick(id)}
-            color="inherit"
-          />,
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={handleDeleteClick(id)}
-            color="inherit"
-          />,
-        ];
+        return actions;
       },
     },
   ];
 
   return (
     <div className="bg-white p-4 rounded-2xl">
-      <div className="py-4 flex gap-3">
+      <Box
+        mb={2}
+        display="flex"
+        gap={2}
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Box display="flex" gap={2} alignItems="center">
+          <TextField
+            select
+            label="Tháng"
+            size="small"
+            value={month}
+            sx={{ width: 100 }}
+            onChange={(e) => setMonth(Number(e.target.value))}
+          >
+            {[...Array(12)].map((_, i) => (
+              <MenuItem key={i + 1} value={i + 1}>
+                {i + 1}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Năm"
+            size="small"
+            type="number"
+            sx={{ width: 100 }}
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+          />
+          <Button
+            variant="contained"
+            onClick={() => handleFetch(true)}
+            sx={{
+              minWidth: 40,
+              minHeight: 40,
+              padding: 0,
+              borderRadius: 2,
+              backgroundColor: "#1976d2",
+              "&:hover": {
+                backgroundColor: "#1565c0",
+              },
+            }}
+          >
+            <SearchIcon sx={{ color: "white", fontSize: 20 }} />
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setShowChart(!showChart)}
+            sx={{
+              minWidth: 40,
+              minHeight: 40,
+              padding: 0,
+              borderRadius: 2,
+              backgroundColor: "#1976d2",
+              "&:hover": {
+                backgroundColor: "#1565c0",
+              },
+            }}
+          >
+            <BarChartIcon sx={{ color: "white", fontSize: 20 }} />
+          </Button>
+        </Box>
         <TextField
-          id="month"
-          label="Tháng"
-          variant="outlined"
+          label="Tổng doanh thu"
           size="small"
-          type="number"
-        />
-        <TextField
-          id="year"
-          label="Năm"
+          value={`${totalRevenue.toLocaleString("vi-VN")} đ`}
           variant="outlined"
-          size="small"
-          type="number"
-        />
-      </div>
-      <div>
-        <Box
-          sx={{
-            height: 500,
-            width: "100%",
-            "& .actions": {
-              color: "text.secondary",
-            },
-            "& .textPrimary": {
-              color: "text.primary",
+          slotProps={{
+            input: {
+              readOnly: true,
+              style: {
+                fontWeight: "bold",
+                color: "#1976d2",
+              },
             },
           }}
-        >
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            editMode="row"
-            rowModesModel={rowModesModel}
-            onRowModesModelChange={handleRowModesModelChange}
-            onRowEditStop={handleRowEditStop}
-            processRowUpdate={processRowUpdate}
-            slots={{ toolbar: EditToolbar }}
-            slotProps={{
-              toolbar: { setRows, setRowModesModel },
-            }}
-            onProcessRowUpdateError={(error) => {
-              console.error("Row update error:", error);
-            }}
-          />
+          sx={{ width: 180 }}
+        />
+      </Box>
+      <Box
+        sx={{
+          height: 500,
+
+          width: "100%",
+
+          "& .actions": {
+            color: "text.secondary",
+          },
+
+          "& .textPrimary": {
+            color: "text.primary",
+          },
+        }}
+      >
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          rowModesModel={rowModesModel}
+          editMode="row"
+          onRowModesModelChange={handleRowModesModelChange}
+          processRowUpdate={processRowUpdate}
+          disableRowSelectionOnClick
+          hideFooterPagination
+          slots={{ toolbar: EditToolbar }}
+          slotProps={{
+            toolbar: {
+              setRows: setRowsFromGrid,
+              setRowModesModel: setRowModesModelFromGrid,
+            },
+          }}
+        />
+      </Box>
+      {showChart && (
+        <Box width="100%">
+          <Typography variant="subtitle1" gutterBottom textAlign="center">
+            Doanh thu theo ngày trong tháng
+          </Typography>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart
+              data={[...rows].sort(
+                (a, b) =>
+                  new Date(a.date).getTime() - new Date(b.date).getTime()
+              )}
+              margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+
+              <XAxis dataKey="date" />
+
+              <YAxis />
+
+              <Tooltip />
+
+              <Legend />
+
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#1976d2"
+                name="Doanh thu"
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </Box>
-      </div>
+      )}
     </div>
   );
 }
