@@ -30,6 +30,7 @@ import {
 import { Disease } from "@/types";
 import { toast } from "react-toastify";
 import { deleteDisease, getAllDiseases, initialDisease, updateDisease } from "@/api/apiDisease";
+import axios from "axios";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -206,17 +207,18 @@ export default function DiseasePage() {
     try {
       if (newRow.isNew) {
         const res = await initialDisease(updatedRow as Disease);
+        if (res) {
         updatedRow.diseaseId = res.diseaseId;
-        if (res)
-          toast.success("Thêm bệnh thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+        toast.success("Thêm bệnh thành công", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        }
       } else {
         const res = await updateDisease(updatedRow as Disease);
         if (res)
@@ -230,12 +232,28 @@ export default function DiseasePage() {
             progress: undefined,
           });
       }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+    } catch (error: unknown) {
+      console.log("err: ", error)
+       if (axios.isAxiosError(error)) {
+        if (
+          error.response?.data.statusCode === 400 &&
+          error.response.data.message.includes("exists")
+        ) {
+          toast.error("Bệnh đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Drug Unit had been already existed")
+        }
+      } else if (error instanceof Error) {
+        console.error("Request Err: " + error.message);
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error: " + error);
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));

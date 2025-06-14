@@ -33,7 +33,13 @@ import { deletePatient } from "@/api/apiPatients";
 import { Doctor, Role } from "@/types";
 import { toast } from "react-toastify";
 import { Autocomplete, Chip, TextField } from "@mui/material";
-import { changeUserRole, createDoctor, getAllDoctors, updateStaff } from "@/api/apiStaff";
+import {
+  changeUserRole,
+  createDoctor,
+  deleteUser,
+  getAllDoctors,
+  updateStaff,
+} from "@/api/apiStaff";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getAllRoles } from "@/api/apiRole";
@@ -170,20 +176,22 @@ export default function StaffDoctors() {
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
       setRows(rows.filter((row) => row.id !== id));
-      const patientId = rows.find((row) => row.id === id)?.patientId;
-      console.log("patientId", patientId);
+      const doctorId = rows.find((row) => row.id === id)?.doctorId;
+      console.log("doctorId", doctorId);
       try {
-        const res = await deletePatient(patientId);
-        if (res) {
-          toast.success("Xóa bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+        if (permissionUser && permissionUser.accessToken) {
+          const res = await deleteUser(permissionUser.accessToken, doctorId);
+          if (res) {
+            toast.success("Xóa bác sĩ thành công", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+          }
         }
       } catch (err: any) {
         console.error("API request failed:", err);
@@ -216,20 +224,11 @@ export default function StaffDoctors() {
   const processRowUpdate = async (newRow: GridRowModel) => {
     const updatedRow: Doctor = { ...(newRow as Doctor), isNew: false };
     console.log(">>>>>>>>>>>: ", updatedRow);
-    const doctor = rows.find(
-      (r) => r.doctorId === updatedRow.doctorId
-    );
+    const doctor = rows.find((r) => r.doctorId === updatedRow.doctorId);
 
     try {
       if (newRow.isNew && permissionUser) {
-        if (newRow.role && newRow.roles !== newRow.role) {
-          const roleRes = await changeUserRole(
-            permissionUser.accessToken,
-            updatedRow.username,
-            newRow.role
-          );
-          console.log(roleRes);
-        } else if (newRow.password !== doctor?.password) {
+        if (newRow.password !== doctor?.password) {
         }
         const res = await createDoctor(
           permissionUser?.accessToken,
@@ -237,6 +236,15 @@ export default function StaffDoctors() {
         );
         updatedRow.doctorId = res.id;
         console.log("SUpporter: ", res);
+        if (newRow.role && newRow.roles !== newRow.role) {
+          const roleRes = await changeUserRole(
+            permissionUser.accessToken,
+            updatedRow.username,
+            newRow.role
+          );
+          console.log(roleRes);
+        }
+
         if (res)
           toast.success("Thêm bác sĩ thành công", {
             position: "bottom-right",
@@ -301,9 +309,24 @@ export default function StaffDoctors() {
     },
     { field: "username", headerName: "Tài khoản", width: 110, editable: true },
     { field: "password", headerName: "Mật khẩu", width: 140, editable: true },
-    { field: "specialization", headerName: "Chuyên khoa", width: 100, editable: true },
-    { field: "qualification", headerName: "Bằng cấp", width: 100, editable: true },
-    { field: "yearsOfExperience", headerName: "Năm kinh nghiệm", width: 100, editable: true },
+    {
+      field: "specialization",
+      headerName: "Chuyên khoa",
+      width: 100,
+      editable: true,
+    },
+    {
+      field: "qualification",
+      headerName: "Bằng cấp",
+      width: 100,
+      editable: true,
+    },
+    {
+      field: "yearsOfExperience",
+      headerName: "Năm kinh nghiệm",
+      width: 100,
+      editable: true,
+    },
     {
       field: "role",
       headerName: "Vai trò",

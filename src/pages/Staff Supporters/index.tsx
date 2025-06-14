@@ -41,6 +41,7 @@ import { Autocomplete, Chip, TextField } from "@mui/material";
 import {
   changeUserRole,
   createSupporter,
+  deleteUser,
   getAllSupporters,
   updateStaff,
 } from "@/api/apiStaff";
@@ -55,7 +56,7 @@ interface UserRow {
 }
 
 interface CellRole {
-  roles: string[]
+  roles: string[];
 }
 // const roles = ["Market", "Finance", "Development"];
 // const randomRole = () => {
@@ -183,20 +184,22 @@ export default function StaffSupporters() {
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
       setRows(rows.filter((row) => row.id !== id));
-      const patientId = rows.find((row) => row.id === id)?.patientId;
-      console.log("patientId", patientId);
+      const supporterId = rows.find((row) => row.id === id)?.supporterId;
+      console.log("supporterId", supporterId);
       try {
-        const res = await deletePatient(patientId);
-        if (res) {
-          toast.success("Xóa bệnh nhân thành công", {
-            position: "bottom-right",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-          });
+        if (permissionUser) {
+          const res = await deleteUser(permissionUser.accessToken, supporterId);
+          if (res) {
+            toast.success("Xóa nhân viên thành công", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+          }
         }
       } catch (err: any) {
         console.error("API request failed:", err);
@@ -235,6 +238,13 @@ export default function StaffSupporters() {
 
     try {
       if (newRow.isNew && permissionUser) {
+        if (newRow.password !== supporter?.password) {
+        }
+        const res = await createSupporter(
+          permissionUser?.accessToken,
+          updatedRow as Supporter
+        );
+        updatedRow.supporterId = res.id;
         if (newRow.role && newRow.roles !== newRow.role) {
           const roleRes = await changeUserRole(
             permissionUser.accessToken,
@@ -242,14 +252,8 @@ export default function StaffSupporters() {
             newRow.role
           );
           console.log(roleRes);
-        } else if (newRow.password !== supporter?.password) {
         }
-        const res = await createSupporter(
-          permissionUser?.accessToken,
-          updatedRow as Supporter
-        );
-        updatedRow.supporterId = res.id;
-        console.log("SUpporter: ", res)
+        console.log("SUpporter: ", res);
         if (res)
           toast.success("Thêm nhân viên thành công", {
             position: "bottom-right",
@@ -310,7 +314,7 @@ export default function StaffSupporters() {
       headerName: "Số điện thoại",
       width: 110,
       editable: true,
-      type: "string"
+      type: "string",
     },
     { field: "username", headerName: "Tài khoản", width: 110, editable: true },
     { field: "password", headerName: "Mật khẩu", width: 140, editable: true },
@@ -325,7 +329,9 @@ export default function StaffSupporters() {
       editable: false,
       renderCell: (params: GridRenderCellParams<CellRole, Supporter>) => {
         const { id, field, api, row } = params;
-        const value: string[] = Array.isArray(params.value) ? params.value : row.roles ?? [];
+        const value: string[] = Array.isArray(params.value)
+          ? params.value
+          : (row.roles ?? []);
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
         const [inputValue, setInputValue] = useState("");
@@ -346,8 +352,7 @@ export default function StaffSupporters() {
 
         return (
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {
-            (value).map((role: string) => (
+            {value.map((role: string) => (
               <Chip
                 key={role}
                 label={role}
@@ -360,7 +365,7 @@ export default function StaffSupporters() {
               <Autocomplete
                 size="small"
                 disableClearable={false}
-                options={roleOptions.filter((r) => !(value).includes(r))}
+                options={roleOptions.filter((r) => !value.includes(r))}
                 inputValue={inputValue}
                 // onInputChange={(_e, newInputValue) =>
                 //   setInputValue(newInputValue);

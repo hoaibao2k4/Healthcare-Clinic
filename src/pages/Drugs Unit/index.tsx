@@ -29,8 +29,14 @@ import {
 } from "@mui/x-data-grid-generator";
 import { toast } from "react-toastify";
 
-import { deleteDrugUnit, getAllDrugUnits, initialDrugUnit, updateDrugUnit } from "@/api/apiDrug";
+import {
+  deleteDrugUnit,
+  getAllDrugUnits,
+  initialDrugUnit,
+  updateDrugUnit,
+} from "@/api/apiDrug";
 import { DrugUnit } from "@/types/drug";
+import axios from "axios";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -124,7 +130,7 @@ export default function DrugUnitPage() {
   );
   const [id, setId] = useState<number>(1);
   useEffect(() => {
-    const fetchDrugUnit= async () => {
+    const fetchDrugUnit = async () => {
       try {
         const res = await getAllDrugUnits();
         const dataWithId = res.data.map((item: DrugUnit, index: number) => ({
@@ -209,7 +215,7 @@ export default function DrugUnitPage() {
         const res = await initialDrugUnit(updatedRow as DrugUnit);
         updatedRow.unitId = res.unitId;
         if (res)
-          toast.success("Thêm bệnh thành công", {
+          toast.success("Thêm đơn vị thuốc thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -221,7 +227,7 @@ export default function DrugUnitPage() {
       } else {
         const res = await updateDrugUnit(updatedRow as DrugUnit);
         if (res)
-          toast.success("Cập nhật bệnh thành công", {
+          toast.success("Cập nhật đơn vị thuốc thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -231,12 +237,28 @@ export default function DrugUnitPage() {
             progress: undefined,
           });
       }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+    } catch (error: unknown) {
+      console.log("err: ", error)
+      if (axios.isAxiosError(error)) {
+        if (
+          error.response?.data.statusCode === 400 &&
+          error.response.data.message.includes("exists")
+        ) {
+          toast.error("Đơn vị thuốc đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Drug Unit had been already existed")
+        }
+      } else if (error instanceof Error) {
+        console.error("Request Err: " + error.message);
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error: " + error);
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));

@@ -7,6 +7,7 @@ import { adminLogin } from "@/api/apiAdmin";
 import { AxiosResponse } from "axios";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 export interface LoginResponse {
   statusCode: number;
   data: {
@@ -23,6 +24,18 @@ const Login = () => {
   const navaite = useNavigate();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast.info("Tài khoản hoặt mật khẩu không được để trống", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Email or password must be not empty!")
+    }
     try {
       const res: AxiosResponse<LoginResponse> | string | number =
         await adminLogin(email, password, dispatch, navaite);

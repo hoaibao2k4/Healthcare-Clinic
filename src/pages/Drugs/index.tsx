@@ -39,6 +39,7 @@ import {
   updateDrug,
 } from "@/api/apiDrug";
 import { Drug, DrugUnit } from "@/types/drug";
+import axios from "axios";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -109,7 +110,7 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
         expirationDate: "",
         unitId: null,
         isNew: true,
-        drugsUnit: {},
+        drugsUnit: null,
       },
     ]);
     setRowModesModel((oldModel) => ({
@@ -232,13 +233,67 @@ export default function DrugsPage() {
     }
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
+    console.log(newRow)
+    if (newRow.unitId === null) {
+      toast.info("Đơn vị không được để trống", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Unit is empty");
+    }
+    const quantity = Number(newRow.quantity);
+    const importPrice = Number(newRow.importPrice)
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      toast.info("Số lượng không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Quantity must be greater than 0");
+    } else if (importPrice <= 0 || !Number.isInteger(importPrice)) {
+      toast.info("Giá nhập không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("ImportPrice must be greater than 0");
+    }
     const drugUnitApi = await getAllDrugUnits();
+    let expirationDateString = "";
+    try {
+      expirationDateString = new Date(newRow.expirationDate)
+        .toISOString()
+        .split("T")[0];
+    } catch (err) {
+      console.error("Invalid expiration date: ", newRow.expirationDate, err);
+      toast.error("Ngày hết hạn không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw err;
+    }
     const updatedRows: Drug = {
       ...(newRow as Drug),
       isNew: false,
-      expirationDate: (newRow.expirationDate as Date)
-        .toISOString()
-        .split("T")[0],
+      expirationDate: expirationDateString,
     };
     const drugUnit = drugUnitApi.data[updatedRows.unitId! - 1];
     console.log(drugUnit);
@@ -274,12 +329,28 @@ export default function DrugsPage() {
             progress: undefined,
           });
       }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+    } catch (error: unknown) {
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        if (
+          error.response?.data.statusCode === 400 &&
+          error.response.data.message.includes("exists")
+        ) {
+          toast.error("Thuốc đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Drug had been already existed");
+        }
+      } else if (error instanceof Error) {
+        console.error("Request Err: " + error.message);
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error: " + error);
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
@@ -447,6 +518,7 @@ export default function DrugsPage() {
           }}
           onProcessRowUpdateError={(error) => {
             console.error("Row update error:", error);
+            throw error;
           }}
         />
       </Box>

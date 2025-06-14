@@ -19,38 +19,38 @@ export default function PrivateRouter({ children }: PrivateRouterProps) {
     if (!permission) return <Navigate to="/login" />;
   }
 
-  const currentSegment = location.pathname.split("/")[1] || "dashboard";
+  // const currentSegment = location.pathname.split("/")[1] || "dashboard";
 
-  if (
-    currentSegment.includes("dashboard") ||
-    currentSegment.includes("integrations")
-  )
-    return children;
-  const adminAllowedSegments = [
-    "staff",
-    "admin",
-    "invoice",
-    "drugs",
-    "reports",
-  ];
+  // if (
+  //   currentSegment.includes("dashboard") ||
+  //   currentSegment.includes("integrations")
+  // )
+  //   return children;
+  // const adminAllowedSegments = [
+  //   "staff",
+  //   "admin",
+  //   "invoice",
+  //   "drugs",
+  //   "reports",
+  // ];
 
-  if (
-    permission?.selected_role === "ADMIN" &&
-    adminAllowedSegments.includes(currentSegment)
-  ) {
-    return children;
-  }
+  // if (
+  //   permission?.selected_role === "ADMIN" &&
+  //   adminAllowedSegments.includes(currentSegment)
+  // ) {
+  //   return children;
+  // }
 
-  const isAllowed = permission?.permissionList.some((item: Permission) => {
-    return (
-      item.permission === currentSegment &&
-      (item.can_read || item.can_create || item.can_update)
-    );
-  });
-  console.log(isAllowed);
-  if (!isAllowed) {
-    return <Navigate to="/dashboard" />;
-  }
+  // const isAllowed = permission?.permissionList.some((item: Permission) => {
+  //   return (
+  //     item.permission === currentSegment &&
+  //     (item.can_read || item.can_create || item.can_update)
+  //   );
+  // });
+  // console.log(isAllowed);
+  // if (!isAllowed) {
+  //   return <Navigate to="/dashboard" />;
+  // }
 
   return children;
 }

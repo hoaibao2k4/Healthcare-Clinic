@@ -194,8 +194,7 @@ export default function PermissionTable() {
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
   );
-  const [id, setId] = useState<number>(1);
-  const navigate = useNavigate();
+
   const [role, setRole] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const permissionUser = useSelector(
@@ -210,6 +209,7 @@ export default function PermissionTable() {
       const matched = apiPermission.find(
         (item) => item.permission === row.permission_name
       );
+    console.log(apiPermission)
       return {
         ...row,
         permission_id: matched?.permission_id,
@@ -256,34 +256,34 @@ export default function PermissionTable() {
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
   };
 
-  const handleDeleteClick = (id: GridRowId) => {
-    return async () => {
-      setRows(rows.filter((row) => row.id !== id));
-      const patientId = rows.find((row) => row.id === id)?.patientId;
-      console.log("patientId", patientId);
-      try {
-        // const res = await deletePatient(patientId);
-        // if (res) {
-        //   toast.success("Xóa bệnh nhân thành công", {
-        //     position: "bottom-right",
-        //     autoClose: 2000,
-        //     hideProgressBar: false,
-        //     closeOnClick: true,
-        //     pauseOnHover: true,
-        //     draggable: true,
-        //     progress: undefined,
-        //   });
-        // }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
-        }
-      }
-    };
-  };
+  // const handleDeleteClick = (id: GridRowId) => {
+  //   return async () => {
+  //     setRows(rows.filter((row) => row.id !== id));
+  //     const patientId = rows.find((row) => row.id === id)?.patientId;
+  //     console.log("patientId", patientId);
+  //     try {
+  //       // const res = await deletePatient(patientId);
+  //       // if (res) {
+  //       //   toast.success("Xóa bệnh nhân thành công", {
+  //       //     position: "bottom-right",
+  //       //     autoClose: 2000,
+  //       //     hideProgressBar: false,
+  //       //     closeOnClick: true,
+  //       //     pauseOnHover: true,
+  //       //     draggable: true,
+  //       //     progress: undefined,
+  //       //   });
+  //       // }
+  //     } catch (err: any) {
+  //       console.error("API request failed:", err);
+  //       if (err.name === "TypeError") {
+  //         console.error("Network error or CORS issue:", err.message);
+  //       } else {
+  //         console.error("Unexpected error:", err.message || err);
+  //       }
+  //     }
+  //   };
+  // };
 
   const handleCancelClick = (id: GridRowId) => () => {
     setRowModesModel({
@@ -453,12 +453,12 @@ export default function PermissionTable() {
             onClick={handleEditClick(id)}
             color="inherit"
           />,
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={handleDeleteClick(id)}
-            color="inherit"
-          />,
+          // <GridActionsCellItem
+          //   icon={<DeleteIcon />}
+          //   label="Delete"
+          //   onClick={handleDeleteClick(id)}
+          //   color="inherit"
+          // />,
         ];
       },
     },

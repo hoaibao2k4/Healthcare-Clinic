@@ -9,7 +9,8 @@ import {
   permissionSuccess,
 } from "@/redux/permissionSlice";
 import { toast } from "react-toastify";
-import { UserPermission } from "@/types";
+
+
 export const adminLogin = async (
   username: string,
   password: string,
@@ -22,10 +23,10 @@ export const adminLogin = async (
       username,
       password,
     });
-    dispatch(loginSuccess(res.data));
-    navigate("/dashboard");
     if (typeof res === "object" && "data" in res) {
       if (res.statusCode === 200) {
+        dispatch(loginSuccess(res.data));
+        navigate("/dashboard");
         toast.success("Đăng nhập thành công!", {
           position: "bottom-right",
           autoClose: 2000,
@@ -36,30 +37,32 @@ export const adminLogin = async (
           progress: undefined,
         });
       }
-    } else {
-      toast.error("Lỗi đăng nhập! Không nhận được phản hồi đúng.", {
-        position: "bottom-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      });
     }
     return res;
   } catch (error: unknown) {
-    toast.error("Lỗi đăng nhập! Vui lòng kiểm tra lại thông tin.", {
-      position: "bottom-right",
-      autoClose: 2000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
     dispatch(loginFail());
     if (axios.isAxiosError(error)) {
+      if (error.status === 401) {
+        toast.error("Sai tài khoản hoặt mật khẩu!", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      } else {
+        toast.error("Lỗi đăng nhập!", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      }
       return (
         error.response?.data || error.message,
         error.response?.status || "No status"
