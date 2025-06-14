@@ -26,7 +26,7 @@ export const initialPatient = async (patient: Patient) => {
       fullName: patient.fullName,
       gender:
         typeof patient.gender === "string"
-          ? (patient.gender).toLowerCase() === "nam"
+          ? patient.gender.toLowerCase() === "nam"
             ? "true"
             : "false"
           : patient.gender
@@ -37,6 +37,7 @@ export const initialPatient = async (patient: Patient) => {
       phoneNumber: patient.phoneNumber,
       residentalIdentity: patient.residentalIdentity,
     });
+
     const res = await response.post("/api/public/patients/add-patient", formData, {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -50,11 +51,15 @@ export const initialPatient = async (patient: Patient) => {
         err.response?.data || err.message,
         err.response?.status || "No status"
       );
+
+      throw err || new Error("Unknown axios error");
     } else {
       console.error("Unknown error:", err);
+      throw err;
     }
   }
 };
+
 
 export const updatePatient = async (patient: Patient) => {
   try {

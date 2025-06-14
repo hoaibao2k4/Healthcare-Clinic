@@ -24,6 +24,7 @@ import {
   GridRowModel,
   GridRowEditStopReasons,
   GridSlotProps,
+  GridFilterModel,
 } from "@mui/x-data-grid";
 import {
   randomCreatedDate,

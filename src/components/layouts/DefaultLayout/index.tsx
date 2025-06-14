@@ -113,7 +113,7 @@ const NAVIGATION: NavigationItemWithPermission[] = [
   },
   {
     segment: "waiting",
-    title: "Danh sách khám bệnh",
+    title: "Danh sách chờ khám bệnh",
     icon: <FeaturedPlayListIcon />,
     permissions: ["DOCTOR"],
   },

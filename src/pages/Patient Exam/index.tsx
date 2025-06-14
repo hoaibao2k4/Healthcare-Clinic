@@ -40,6 +40,9 @@ import { Patient } from "@/types";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import BasicDatePicker from "@/components/layouts/components/DatePicker";
+import axios from "axios";
+import { createExam } from "@/api/apiExam";
+import Tooltip from "@mui/material/Tooltip";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -164,7 +167,7 @@ export default function PatientExam() {
     items: searchTerm
       ? [
           {
-            field: "fullName",
+            field: "residentalIdentity",
             operator: "contains",
             value: searchTerm,
           },
@@ -238,6 +241,21 @@ export default function PatientExam() {
     return /^0\d{9}$/.test(phoneNumber);
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
+    if (
+      newRow?.yearOfBirth < 1930 ||
+      newRow?.yearOfBirth > 2025 ||
+      Number.isNaN(newRow?.yearOfBirth)
+    ) {
+      toast.error("Năm sinh không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
     if (!checkIdentity(newRow?.residentalIdentity)) {
       toast.error("CMND/CCCD không hợp lệ", {
         position: "bottom-right",
@@ -265,7 +283,7 @@ export default function PatientExam() {
     try {
       if (newRow.isNew) {
         const res = await initialPatient(updatedRow as Patient);
-        updatedRow.patientId = res.patientId;
+        console.log("res: ", res);
         if (res)
           toast.success("Thêm bệnh nhân thành công", {
             position: "bottom-right",
@@ -276,6 +294,8 @@ export default function PatientExam() {
             draggable: true,
             progress: undefined,
           });
+        updatedRow.patientId = res.patientId;
+        handleRegisterExam(updatedRow.patientId!)
       } else {
         const res = await updatePatient(updatedRow as Patient);
         if (res)
@@ -289,26 +309,71 @@ export default function PatientExam() {
             progress: undefined,
           });
       }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+    } catch (err: unknown) {
+      console.log("err: ", err);
+      if (axios.isAxiosError(err)) {
+        if (
+          err.response?.data.statusCode === 500 &&
+          err.response.data.message.includes("2 results")
+        ) {
+          toast.error("Số điện thoại và CCCD đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("CCCD và Số điện thoại đã tồn tại");
+        } else if (
+          err.response?.data.statusCode === 409 &&
+          err.response.data.message.includes("Phone")
+        ) {
+          toast.error("Số điện thoại đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Số điện thoại đã tồn tại");
+        } else if (
+          err.response?.data.statusCode === 409 &&
+          err.response?.data.message.includes("Residental")
+        ) {
+          toast.error("CCCD đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("CCCD đã tồn tại");
+        }
+        throw err.response?.data || new Error("Unknown axios error");
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error:", err);
+        throw err;
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
     return updatedRow;
   };
 
+  const handleRegisterExam = async (id: number) => {
+    const registerExam = await createExam(id);
+    console.log(registerExam);
+  };
+
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
-  const handleExaminate = (id: GridRowId) => {
-    const patient = rows.find((row) => row.id === id);
-    console.log(patient);
-    navigate("/records", { state: { patient } });
-  };
+
   const columns: GridColDef[] = [
     { field: "fullName", headerName: "Họ và tên", width: 160, editable: true },
     {
@@ -367,7 +432,7 @@ export default function PatientExam() {
       headerName: "Actions",
       width: 160,
       cellClassName: "actions",
-      getActions: ({ id }) => {
+      getActions: ({ id, row }) => {
         const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
         if (isInEditMode) {
@@ -405,9 +470,12 @@ export default function PatientExam() {
             color="inherit"
           />,
           <GridActionsCellItem
-            icon={<AssignmentAddIcon />}
-            label="Khám bệnh"
-            onClick={() => handleExaminate(id)}
+            icon={
+              <Tooltip title="Khám bệnh">
+                <AssignmentAddIcon />
+              </Tooltip>
+            }            label="Khám bệnh"
+            onClick={() => handleRegisterExam(row.patientId)}
             color="inherit"
           />,
         ];
@@ -426,12 +494,12 @@ export default function PatientExam() {
           borderRadius={2}
           px={2}
           py={1}
-          width={300}
+          width={350}
           boxShadow={1}
         >
           <SearchIcon sx={{ color: "gray", marginRight: 1 }} />
           <input
-            placeholder="Tìm kiếm tên bệnh nhân"
+            placeholder="Tìm kiếm bệnh nhân bằng CCCD"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{

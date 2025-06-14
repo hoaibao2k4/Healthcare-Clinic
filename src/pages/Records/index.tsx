@@ -27,11 +27,12 @@ import { randomId } from "@mui/x-data-grid-generator";
 import { useLocation } from "react-router-dom";
 import { Disease, ExaminationDetail, Patient } from "@/types";
 import { getAllDiseases } from "@/api/apiDisease";
-import { MenuItem } from "@mui/material";
+import { MenuItem, Modal } from "@mui/material";
 import { getAllDrugs } from "@/api/apiDrug";
 import { Drug } from "@/types/drug";
 import { updateExam, updateRecordExam } from "@/api/apiExam";
 import { toast } from "react-toastify";
+import BloodLab from "@/components/layouts/components/Modal/LIS";
 
 declare module "@mui/x-data-grid" {
   interface ToolbarPropsOverrides {
@@ -82,6 +83,12 @@ export default function PatientRecords() {
   const [diseases, setDiseases] = useState<Disease[] | null>([]);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState("");
   const [selectedSymptom, setSelectedSymptom] = useState("");
+
+  //modal
+
+  const [open, setOpen] = React.useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -317,10 +324,17 @@ export default function PatientRecords() {
     <div className="bg-white p-4 rounded-2xl">
       <div className="flex justify-between w-full">
         <h1 className="text-2xl font-bold p-2 ">Lập phiếu khám</h1>
-        <div className="mx-6 my-2">
-          <Button variant="contained" onClick={handleSaveRecord}>
-            Lưu kết quả
-          </Button>
+        <div className="flex">
+          <div className="my-2">
+            <Button variant="contained" onClick={handleOpen}>
+              KQXN
+            </Button>
+          </div>
+          <div className="mx-6 my-2">
+            <Button variant="contained" onClick={handleSaveRecord}>
+              Lưu kết quả
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -340,7 +354,7 @@ export default function PatientRecords() {
             },
           }}
         />
-        <BasicDatePicker />
+        <BasicDatePicker disable={true} />
         <TextField
           id="symptom"
           label="Triệu chứng"
@@ -391,6 +405,18 @@ export default function PatientRecords() {
           }}
         />
       </Box>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        {
+          <>
+            <BloodLab patient={patient!}/>
+          </>
+        }
+      </Modal>
     </div>
   );
 }

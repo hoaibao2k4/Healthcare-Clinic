@@ -61,3 +61,39 @@ export const updateRecordExam = async (examinationId: number, records: any) => {
     }
   }
 };
+
+export const predictorVitaminD = async (inputData: any) => {
+  try {
+    const res = response.post("http://localhost:8080/predict", inputData);
+    return res;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return (
+        error.response?.data || error.message,
+        error.response?.status || "No status"
+      );
+    } else if (error instanceof Error) {
+      return "Request Err: " + error.message;
+    } else {
+      return "Unknown error: " + error;
+    }
+  }
+};
+
+export const createExam = async (id: number) => {
+  try {
+    const res = await response.post(`/api/public/examination/create-examination/${id}`)
+    return res
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return (
+        error.response?.data || error.message,
+        error.response?.status || "No status"
+      );
+    } else if (error instanceof Error) {
+      return "Request Err: " + error.message;
+    } else {
+      return "Unknown error: " + error;
+    }
+  }
+};
