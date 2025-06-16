@@ -8,3 +8,4 @@ export * from "./roles"
 export * from './permission'
 export * from './supporter'
 export * from './doctor'
+export * from './settings'
