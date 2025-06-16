@@ -9,27 +9,20 @@ import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import BarChartIcon from "@mui/icons-material/BarChart";
-import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { TextField, MenuItem, Typography } from "@mui/material";
 import {
-  GridRowsProp,
   GridRowModesModel,
   GridRowModes,
   DataGrid,
   GridColDef,
   GridToolbarContainer,
   GridActionsCellItem,
-  GridEventListener,
   GridRowId,
   GridRowModel,
-  GridRowEditStopReasons,
   GridSlotProps,
 } from "@mui/x-data-grid";
 import { toast } from "react-toastify";
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   XAxis,
@@ -41,6 +34,25 @@ import {
 } from "recharts";
 import { getRevenueReport } from "@/api/apiReport";
 import { DayReport, Revenue } from "@/types/report";
+
+function validateRevenueInputs(
+  month: number,
+  year: number,
+  MIN_YEAR: number,
+  MAX_YEAR: number
+): boolean {
+  if (month < 1 || month > 12) {
+    toast.error("Tháng phải từ 1 đến 12", { position: "bottom-right" });
+    return false;
+  }
+  if (year < MIN_YEAR || year > MAX_YEAR) {
+    toast.error(`Năm không hợp lệ (${MIN_YEAR}-${MAX_YEAR})`, {
+      position: "bottom-right",
+    });
+    return false;
+  }
+  return true;
+}
 
 function EditToolbar(props: GridSlotProps["toolbar"]) {
   const { setRows, setRowModesModel } = props;
@@ -71,6 +83,7 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
         startIcon={<AddIcon />}
         size="large"
         onClick={handleClick}
+        title="Thêm dòng"
       ></Button>
     </GridToolbarContainer>
   );
@@ -78,6 +91,8 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
 
 export default function RevenuePage() {
   const today = new Date();
+  const MIN_YEAR = 1900;
+  const MAX_YEAR = new Date().getFullYear() + 5;
   const [month, setMonth] = useState<number>(today.getMonth() + 1);
   const [year, setYear] = useState<number>(today.getFullYear());
   const [rows, setRows] = useState<DayReport[]>([]);
@@ -86,8 +101,9 @@ export default function RevenuePage() {
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
 
   const handleFetch = async (showToast = true) => {
+    if (!validateRevenueInputs(month, year, MIN_YEAR, MAX_YEAR)) return;
     try {
-      const res: Revenue = await getRevenueReport(month, year.toString());
+      const res: Revenue = await getRevenueReport(month, year);
       console.log("API response: ", res);
 
       const dayReports = res?.dayReports || [];
@@ -126,8 +142,6 @@ export default function RevenuePage() {
       setRows(formatted);
       setTotalRevenue(res?.totalRevenue || 0);
 
-      //
-
       if (formatted.length === 0 && showToast) {
         toast.info("No revenue data found", {
           position: "bottom-right",
@@ -148,14 +162,27 @@ export default function RevenuePage() {
     } catch (err: any) {
       console.error("API request failed:", err);
 
-      if (err.name === "TypeError") {
+      if (
+        !navigator.onLine ||
+        (err.message && err.message.includes("Failed to fetch"))
+      ) {
         console.error("Network error or CORS issue:", err.message);
+        toast.error("Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
+        return;
       } else {
         console.error("Unexpected error:", err.message || err);
+        toast.error("Đã xảy ra lỗi. Vui lòng thử lại sau.", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
+        return;
       }
     }
   };
-  //
+
   // useEffect(() => {
   //   if (!rows || rows.length === 0) return;
 
@@ -244,6 +271,17 @@ export default function RevenuePage() {
   };
   const processRowUpdate = (newRow: GridRowModel) => {
     console.log("Row updated: ", newRow);
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(newRow.date)) {
+      toast.error(
+        "Ngày không hợp lệ. Vui lòng nhập theo định dạng yyyy-MM-dd",
+        {
+          position: "bottom-right",
+          autoClose: 3000,
+        }
+      );
+      throw new Error("Invalid date format");
+    }
     try {
       const updatedRow: DayReport = { ...(newRow as DayReport), isNew: false };
 
@@ -315,6 +353,7 @@ export default function RevenuePage() {
       type: "string",
       width: 180,
       editable: true,
+      description: "yyyy-MM-dd",
     },
     {
       field: "numberOfPatients",
@@ -399,6 +438,7 @@ export default function RevenuePage() {
         <Box display="flex" gap={2} alignItems="center">
           <TextField
             select
+            id="month"
             label="Tháng"
             size="small"
             value={month}
@@ -412,6 +452,7 @@ export default function RevenuePage() {
             ))}
           </TextField>
           <TextField
+            id="year"
             label="Năm"
             size="small"
             type="number"
@@ -422,6 +463,7 @@ export default function RevenuePage() {
           <Button
             variant="contained"
             onClick={() => handleFetch(true)}
+            title="Tìm kiếm dữ liệu"
             sx={{
               minWidth: 40,
               minHeight: 40,
@@ -438,6 +480,7 @@ export default function RevenuePage() {
           <Button
             variant="contained"
             onClick={() => setShowChart(!showChart)}
+            title="Xem biểu đồ doanh thu"
             sx={{
               minWidth: 40,
               minHeight: 40,
