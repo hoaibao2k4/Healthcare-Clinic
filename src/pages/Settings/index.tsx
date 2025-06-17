@@ -19,11 +19,13 @@ export default function SettingsPage() {
   const [maxDrugs, setMaxDrugs] = React.useState(100);
   const [maxUnits, setMaxUnits] = React.useState(20);
   const [maxUsages, setMaxUsages] = React.useState(10);
+  const [settingId, setSettingId] = React.useState<number>(1);
 
   React.useEffect(() => {
     const fetchSettings = async () => {
       try {
         const data = await getSystemSettings();
+        setSettingId(data.id);
         setMaxPatientsPerDay(data.maxPatientsPerDay);
         setExamFee(data.examFee);
         setMaxDiseases(data.maxDiseases);
@@ -61,6 +63,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     if (!validateSettings()) return;
     const config: SystemSettings = {
+      id: settingId,
       maxPatientsPerDay,
       examFee,
       maxDiseases,

@@ -1,28 +1,36 @@
 import { response } from "@/services/axios";
 import axios from "axios";
-import { SystemSettings } from "@/types";
-export const getSystemSettings = async () => {
+import { SystemSettings } from "@/types/settings";
+export const getSystemSettings = async ()=> {
   try {
-    const res = await response.get("/api/admin/settings");
-    return res.data?.data as SystemSettings;
+    const res = await response.get("/api/public/parameter/get-parameter");
+    const data = Array.isArray(res.data) ? res.data[0] : res.data;
+    return data as SystemSettings;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       console.error(
         err.response?.data || err.message,
         err.response?.status || "No status"
       );
-      throw err;
     } else {
       console.error("Unknown error:", err);
-      throw err;
     }
+    throw err;
   }
 };
 
 
-export const saveSystemSettings = async (data: SystemSettings) => {
+export const saveSystemSettings = async (data: SystemSettings & { id: number }) => {
   try {
-    const res = await response.post("/api/admin/settings", data);
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value.toString());
+    });
+
+    const res = await response.patch(
+      "/api/public/parameter/edit-parameter",
+      formData
+    );
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
@@ -30,10 +38,9 @@ export const saveSystemSettings = async (data: SystemSettings) => {
         err.response?.data || err.message,
         err.response?.status || "No status"
       );
-      throw err;
     } else {
       console.error("Unknown error:", err);
-      throw err;
     }
+    throw err;
   }
 };

@@ -1,4 +1,5 @@
 export interface SystemSettings {
+  id: number; 
   maxPatientsPerDay: number;
   examFee: number;
   maxDiseases: number;
