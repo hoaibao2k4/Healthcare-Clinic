@@ -368,7 +368,7 @@ export default function PatientWaiting() {
   return (
     <div className="bg-white p-4 rounded-2xl">
       <div className="flex pb-4">
-        <BasicDatePicker value={selectedDate} onChange={setSelectedDate} disable={true} />{" "}
+        <BasicDatePicker value={selectedDate} onChange={setSelectedDate} />{" "}
       </div>
       <div>
         <Box

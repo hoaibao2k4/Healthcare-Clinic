@@ -30,7 +30,7 @@ import { getAllDiseases } from "@/api/apiDisease";
 import { MenuItem, Modal } from "@mui/material";
 import { getAllDrugs } from "@/api/apiDrug";
 import { Drug } from "@/types/drug";
-import { updateExam, updateRecordExam } from "@/api/apiExam";
+import { getPatientRecord, updateExam, updateRecordExam } from "@/api/apiExam";
 import { toast } from "react-toastify";
 import BloodLab from "@/components/layouts/components/Modal/LIS";
 
@@ -93,10 +93,34 @@ export default function PatientRecords() {
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const fetchDiseases = await getAllDiseases();
-        setDiseases(fetchDiseases?.data);
-        const fetchDrug = await getAllDrugs();
-        setDrugs(fetchDrug?.data);
+        if (patient && patient.examId) {
+          const fetchDiseases = await getAllDiseases();
+          setDiseases(fetchDiseases?.data);
+          const fetchDrug = await getAllDrugs();
+          setDrugs(fetchDrug?.data);
+          const res = await getPatientRecord(patient.examId);
+
+          const disease = fetchDiseases?.data.find(
+            (r: Disease) => r.diseaseName === res.diseaseName
+          );
+          console.log(res);
+          if (res && disease && res.diseaseName) {
+            setSelectedDiagnosis(disease.diseaseId);
+            setSelectedSymptom(res.symptoms);
+
+            const dataWithId = res.examinationDetails.map(
+              (item: ExaminationDetail) => ({
+                ...item,
+                id: randomId(),
+                drugId: fetchDrug?.data.find(
+                  (drug: Drug) => drug.drugName === item.drugName
+                )?.drugId,
+              })
+            );
+            setRows(dataWithId);
+            console.log(dataWithId);
+          }
+        }
       } catch (err: any) {
         console.error("Fetch API failed:");
         if (err.name === "TypeError") {
@@ -125,6 +149,15 @@ export default function PatientRecords() {
   };
 
   const handleDeleteClick = (id: GridRowId) => () => {
+    toast.success("Xóa thuốc thành công", {
+      position: "bottom-right",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
     setRows(rows.filter((row) => row.id !== id));
   };
 
@@ -147,17 +180,53 @@ export default function PatientRecords() {
       isNew: false,
       drugs: selectedDrug!,
     };
-
-    setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
-    toast.success("Thêm thuốc thành công", {
-      position: "bottom-right",
-      autoClose: 2000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
+    console.log(updatedRow);
+    const quantity = Number(updatedRow.quantity);
+    if (!updatedRow.drugId) {
+      toast.error("Thuốc chưa được chọn", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!updatedRow.note) {
+      toast.error("Cách dùng chưa nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!Number.isInteger(quantity) || quantity < 1) {
+      toast.error("Số lượng không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else {
+      setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+      toast.success("Thêm thuốc thành công", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
 
     return updatedRow;
   };
@@ -168,7 +237,7 @@ export default function PatientRecords() {
 
   const handleSaveRecord = async () => {
     if (!(rows && selectedDiagnosis && selectedSymptom)) {
-      toast.error("Bác sĩ chưa khám cho bệnh nhân", {
+      toast.error("Bệnh nhân chưa được khám", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -208,7 +277,7 @@ export default function PatientRecords() {
         console.log("res: ", res);
         console.log("res cord: ", resRecord);
         if (res && resRecord) {
-          toast.success("Thêm thông tin thành công", {
+          toast.success("Lưu thông tin thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -235,15 +304,26 @@ export default function PatientRecords() {
       headerName: "Thuốc",
       width: 240,
       editable: true,
-      valueOptions: drugs?.map((drug) => ({
-        label: drug.drugName,
-        value: drug.drugId,
-      })),
       type: "singleSelect",
-      valueGetter: (value) => {
-        return value || "";
+      valueGetter: (value) => value || "",
+      valueOptions: (params) => {
+        const selectedDrugIds = rows
+          .filter((row) => row.id !== params.id && row.drugId)
+          .map((row) => row.drugId);
+
+        const availableDrugs = drugs?.filter(
+          (drug) => !selectedDrugIds.includes(drug.drugId)
+        );
+
+        return (
+          availableDrugs?.map((drug) => ({
+            label: drug.drugName,
+            value: drug.drugId,
+          })) || []
+        );
       },
     },
+
     {
       field: "unitName",
       headerName: "Đơn vị",
@@ -253,7 +333,7 @@ export default function PatientRecords() {
       headerAlign: "left",
       editable: false,
       valueGetter: (params, row) => {
-        return row.drugs?.drugsUnit?.unitName || "Chưa có";
+        return row.unitName || row.drugs?.drugsUnit?.unitName || "Chưa có";
       },
     },
     {
@@ -344,6 +424,7 @@ export default function PatientRecords() {
           label="Họ tên"
           variant="outlined"
           size="medium"
+          disabled
           value={patient?.fullName}
           sx={{
             "& .MuiInputLabel-root": {
@@ -413,7 +494,7 @@ export default function PatientRecords() {
       >
         {
           <>
-            <BloodLab patient={patient!}/>
+            <BloodLab patient={patient!} />
           </>
         }
       </Modal>

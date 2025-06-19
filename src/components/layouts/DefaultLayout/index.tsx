@@ -204,15 +204,16 @@ function filterNavigationByPermission(
   return items
     .map((item) => {
       if (item.kind === "header" || item.kind === "divider") return item;
-      if (item.segment === "dashboard" || item.segment === "integrations")
-        return item;
+      if (item.segment === "dashboard") //|| item.segment === "integrations")
+       return item;
       if (
         role === "ADMIN" &&
-        ( item.segment === "staff" ||
+        (item.segment === "staff" ||
           item.segment === "admin" ||
           item.segment === "invoice" ||
           item.segment === "drugs" ||
-          item.segment === "reports" )
+          item.segment === "reports" ||
+          item.segment === "integrations")
       ) {
         return {
           ...item,

@@ -10,13 +10,11 @@ export const getAllRoles = async (token: string) => {
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
-      return (
-        err.response?.data || err.message, err.response?.status || "No status"
-      );
+      throw err || "No status";
     } else if (err instanceof Error) {
-      return err.message;
+      throw err.message;
     } else {
-      return "Unknown err: " + err;
+      throw "Unknown err: " + err;
     }
   }
 };
@@ -39,13 +37,11 @@ export const createRole = async (
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
-      return (
-        err.response?.data || err.message, err.response?.status || "No status"
-      );
+      throw err || "No status";
     } else if (err instanceof Error) {
-      return err.message;
+      throw err.message;
     } else {
-      return "Unknown err: " + err;
+      throw "Unknown err: " + err;
     }
   }
 };
@@ -60,14 +56,11 @@ export const deleteRole = async (id: number, token: string) => {
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };

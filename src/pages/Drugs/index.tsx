@@ -194,12 +194,12 @@ export default function DrugsPage() {
 
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
-      setRows(rows.filter((row) => row.id !== id));
       const drugId = rows.find((row) => row.id === id)?.drugId;
       console.log("drugId", drugId);
       try {
         const res = await deleteDrug(drugId);
         if (res) {
+          setRows(rows.filter((row) => row.id !== id));
           toast.success("Xóa thành công", {
             position: "bottom-right",
             autoClose: 2000,
@@ -210,12 +210,24 @@ export default function DrugsPage() {
             progress: undefined,
           });
         }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
+      } catch (error: unknown) {
+        console.error("API request failed:", error);
+        if (axios.isAxiosError(error)) {
+          if (
+            error.response?.data.statusCode === 500 &&
+            error.response.data.message.includes("execute statement")
+          ) {
+            toast.error("Thất bại do vi phạm ràng buộc với Phiếu Khám", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+            throw new Error("Foreign key");
+          }
         }
       }
     };
@@ -233,9 +245,20 @@ export default function DrugsPage() {
     }
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
-    console.log(newRow)
-    if (newRow.unitId === null) {
-      toast.info("Đơn vị không được để trống", {
+    console.log(newRow);
+    if (!newRow.drugName) {
+      toast.error("Tên thuốc không được để trống", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!newRow.unitId) {
+      toast.error("Đơn vị không được để trống", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -247,9 +270,9 @@ export default function DrugsPage() {
       throw new Error("Unit is empty");
     }
     const quantity = Number(newRow.quantity);
-    const importPrice = Number(newRow.importPrice)
+    const importPrice = Number(newRow.importPrice);
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      toast.info("Số lượng không hợp lệ", {
+      toast.error("Số lượng không hợp lệ", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -260,7 +283,7 @@ export default function DrugsPage() {
       });
       throw new Error("Quantity must be greater than 0");
     } else if (importPrice <= 0 || !Number.isInteger(importPrice)) {
-      toast.info("Giá nhập không hợp lệ", {
+      toast.error("Giá nhập không hợp lệ", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,

@@ -90,14 +90,11 @@ export const deleteDrugUnit = async (unitId: number) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };
@@ -138,16 +135,16 @@ export const initialDrug = async (drug: Drug) => {
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      console.log (
+      console.log(
         error.response?.data || error.message,
         error.response?.status || "No status"
       );
     } else if (error instanceof Error) {
-      console.log ("Request Err: " + error.message)
+      console.log("Request Err: " + error.message);
     } else {
-      console.log ("Unknown error: " + error)
+      console.log("Unknown error: " + error);
     }
-    throw error
+    throw error;
   }
 };
 
@@ -173,16 +170,16 @@ export const updateDrug = async (drug: Drug) => {
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      console.log (
+      console.log(
         error.response?.data || error.message,
         error.response?.status || "No status"
       );
     } else if (error instanceof Error) {
-      console.log ("Request Err: " + error.message)
+      console.log("Request Err: " + error.message);
     } else {
-      console.log ("Unknown error: " + error)
+      console.log("Unknown error: " + error);
     }
-    throw error
+    throw error;
   }
 };
 
@@ -194,14 +191,11 @@ export const deleteDrug = async (drugId: number) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };

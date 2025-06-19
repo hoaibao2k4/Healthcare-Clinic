@@ -63,11 +63,11 @@ export const updateStaff = async (token: string, staff: Doctor | Supporter) => {
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return error.response?.data || error.message, error.status || "No status";
+      throw error;
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };
@@ -82,11 +82,11 @@ export const createSupporter = async (token: string, supporter: Supporter) => {
     return res.data
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return error.response?.data || error.message, error.status || "No status";
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 }
@@ -101,11 +101,11 @@ export const createDoctor = async (token: string, doctor: Doctor) => {
     return res.data
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return error.response?.data || error.message, error.status || "No status";
+      throw error
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 }
@@ -124,11 +124,11 @@ export const changeUserRole = async (token: string, username: string, roleList: 
   }
   catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return error.response?.data || error.message, error.status || "No status";
+      throw error
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 }

@@ -6,5 +6,15 @@ export interface ExaminationDetail {
     note: string,
     id?: string,
     isNew?: boolean,
-    drugId?: number
+    drugId?: number,
+    drugName?: string,
+    unitName?: string,
+}
+
+export interface Record {
+    examId?: string,
+    examinationDate: string,
+    symptoms: string,
+    diseaseName: string,
+    examinationDetails: ExaminationDetail[]
 }
