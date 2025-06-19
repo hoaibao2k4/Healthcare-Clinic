@@ -21,15 +21,12 @@ import {
   GridRowId,
   GridRowModel,
   GridRowEditStopReasons,
-  GridRowsProp,
   GridSlotProps,
 } from "@mui/x-data-grid";
 import { toast } from "react-toastify";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -40,6 +37,25 @@ import { getDrugsReport } from "@/api/apiReport";
 import { getAllDrugUnits } from "@/api/apiDrug";
 import { DrugUnit } from "@/types/drug";
 import { DrugReport, DrugUsageRow } from "@/types/report";
+
+function validateInputs(month: number, year: number, topN: number): boolean {
+  const MAX_YEAR = new Date().getFullYear() + 5;
+  if (month < 1 || month > 12) {
+    toast.error("Tháng phải từ 1 đến 12", { position: "bottom-right" });
+    return false;
+  }
+  if (year < 1900 || year > MAX_YEAR) {
+    toast.error(`Năm không hợp lệ (1900-${MAX_YEAR})`, {
+      position: "bottom-right",
+    });
+    return false;
+  }
+  if (topN <= 0) {
+    toast.error("Giá trị Top N phải lớn hơn 0", { position: "bottom-right" });
+    return false;
+  }
+  return true;
+}
 
 function EditToolbar(props: GridSlotProps["toolbar"]) {
   const { setRows, setRowModesModel } = props;
@@ -70,6 +86,7 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
         startIcon={<AddIcon />}
         size="large"
         onClick={handleClick}
+        title="Thêm dòng mới"
       ></Button>
     </GridToolbarContainer>
   );
@@ -104,6 +121,7 @@ export default function DrugUsagePage() {
   };
   let hasShownError = false;
   const handleFetch = async (showToast = true) => {
+    if (!validateInputs(month, year, topN)) return;
     try {
       const res: DrugReport[] = await getDrugsReport(month, year);
       if (!res || !Array.isArray(res)) {
@@ -168,17 +186,13 @@ export default function DrugUsagePage() {
     }
   };
 
-  //
-  // useEffect(() => {
-  //   if (!rows || rows.length === 0) return;
-  //   const sorted = [...rows]
-  //     .sort((a, b) => b.usedNumber - a.usedNumber)
-  //     .slice(0, topN);
-  //   setTopUsed(sorted);
-  // }, [rows, topN]);
-  //
-
   const processRowUpdate = async (newRow: GridRowModel) => {
+    if (newRow.usedNumber < 0) {
+      toast.error("Số lượng sử dụng không được âm", {
+        position: "bottom-right",
+      });
+      throw new Error("Invalid usedNumber");
+    }
     const updatedRow: DrugUsageRow = {
       id: newRow.id,
 
@@ -378,6 +392,7 @@ export default function DrugUsagePage() {
       <Box mb={2} display="flex" gap={2} alignItems="center">
         <TextField
           select
+          id="month"
           label="Tháng"
           size="small"
           value={month}
@@ -390,6 +405,7 @@ export default function DrugUsagePage() {
           ))}
         </TextField>
         <TextField
+          id="year"
           label="Năm"
           size="small"
           type="number"
@@ -400,6 +416,7 @@ export default function DrugUsagePage() {
         <Button
           variant="contained"
           onClick={() => handleFetch(true)}
+          title="Tìm kiếm dữ liệu"
           sx={{
             minWidth: 40,
             minHeight: 40,
@@ -416,6 +433,7 @@ export default function DrugUsagePage() {
         <Button
           variant="contained"
           onClick={() => setShowChart(!showChart)}
+          title="Xem biểu đồ sử dụng thuốc"
           sx={{
             minWidth: 40,
             minHeight: 40,
@@ -489,7 +507,23 @@ export default function DrugUsagePage() {
               size="small"
               type="number"
               value={topN}
-              onChange={(e) => setTopN(Number(e.target.value))}
+              slotProps={{
+                input: {
+                  inputProps: {
+                    min: 1,
+                    inputMode: "numeric",
+                  },
+                },
+              }}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (val <= 0) {
+                  toast.error("Giá trị Top N phải lớn hơn 0", {
+                    position: "bottom-right",
+                  });
+                }
+                setTopN(val);
+              }}
               sx={{ width: 100 }}
             />
           </Box>
