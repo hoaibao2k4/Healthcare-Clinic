@@ -43,6 +43,7 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getAllRoles } from "@/api/apiRole";
+import axios from "axios";
 ////////////
 interface UserRow {
   id: number;
@@ -221,9 +222,130 @@ export default function StaffDoctors() {
     }
   };
 
+  const checkPhoneNumber = (phoneNumber: string) => {
+    return /^0\d{9}$/.test(phoneNumber);
+  };
+  const checkMail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const processRowUpdate = async (newRow: GridRowModel) => {
     const updatedRow: Doctor = { ...(newRow as Doctor), isNew: false };
     console.log(">>>>>>>>>>>: ", updatedRow);
+    const exp = Number(updatedRow.yearsOfExperience);
+    if (!updatedRow.fullName) {
+      toast.error("Họ tên chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.email) {
+      toast.error("Email chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.phoneNumber) {
+      toast.error("Số điện thoại chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.username) {
+      toast.error("Tài khoản chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.password) {
+      toast.error("Mật khẩu chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.qualification) {
+      toast.error("Bằng cấp chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.specialization) {
+      toast.error("Chuyên khoa chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    }
+    if (!checkPhoneNumber(updatedRow.phoneNumber)) {
+      toast.error("Số điện thoại không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!checkMail(updatedRow.email)) {
+      toast.error("Email không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!Number.isInteger(exp) || updatedRow.yearsOfExperience < 0) {
+      toast.error("Số năm kinh nghiệm không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    }
+
     const doctor = rows.find((r) => r.doctorId === updatedRow.doctorId);
 
     try {
@@ -235,7 +357,7 @@ export default function StaffDoctors() {
           updatedRow as Doctor
         );
         updatedRow.doctorId = res.id;
-        console.log("SUpporter: ", res);
+        console.log("doctor: ", res);
         if (newRow.role && newRow.roles !== newRow.role) {
           const roleRes = await changeUserRole(
             permissionUser.accessToken,
@@ -258,35 +380,109 @@ export default function StaffDoctors() {
       } else {
         if (permissionUser && permissionUser.accessToken) {
           if (newRow.role && newRow.roles !== newRow.role) {
-            const roleRes = await changeUserRole(
-              permissionUser.accessToken,
-              updatedRow.username,
-              newRow.role
-            );
-            console.log(roleRes);
+            if (
+              doctor?.username !== updatedRow.username &&
+              newRow.role.length === 0
+            ) {
+              const res = await updateStaff(
+                permissionUser?.accessToken,
+                updatedRow as Doctor
+              );
+              if (res)
+                toast.success("Cập nhật bác sĩ thành công", {
+                  position: "bottom-right",
+                  autoClose: 2000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                  progress: undefined,
+                });
+            } else {
+              const roleRes = await changeUserRole(
+                permissionUser.accessToken,
+                updatedRow.username,
+                newRow.role
+              );
+              console.log(roleRes);
+              const res = await updateStaff(
+                permissionUser?.accessToken,
+                updatedRow as Doctor
+              );
+              if (res)
+                toast.success("Cập nhật bác sĩ thành công", {
+                  position: "bottom-right",
+                  autoClose: 2000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                  progress: undefined,
+                });
+            }
           }
-          const res = await updateStaff(
-            permissionUser?.accessToken,
-            updatedRow as Doctor
-          );
-          if (res)
-            toast.success("Cập nhật bác sĩ thành công", {
-              position: "bottom-right",
-              autoClose: 2000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-            });
         }
       }
     } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+      if (axios.isAxiosError(err)) {
+        if (
+          err.response?.data.statusCode === 409 &&
+          err.response.data.message.includes("Username")
+        ) {
+          toast.error("Tài khoản đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("CCCD và Số điện thoại đã tồn tại");
+        } else if (
+          err.response?.data.statusCode === 409 &&
+          err.response.data.message.includes("Phone")
+        ) {
+          toast.error("Số điện thoại đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Data existed");
+        } else if (
+          err.response?.data.statusCode === 409 &&
+          err.response?.data.message.includes("Email")
+        ) {
+          toast.error("Email đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Data existed");
+        } else if (err.response?.data.message.includes("assigning the role")) {
+          toast.error("Không thể thay đổi tài khoản đã có vai trò", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Data existed");
+        }
+        throw err.response?.data || new Error("Unknown axios error");
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error:", err);
+        throw err;
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
@@ -308,7 +504,13 @@ export default function StaffDoctors() {
       type: "string",
     },
     { field: "username", headerName: "Tài khoản", width: 110, editable: true },
-    { field: "password", headerName: "Mật khẩu", width: 140, editable: true },
+    {
+      field: "password",
+      headerName: "Mật khẩu",
+      width: 140,
+      renderCell: (params) => "•".repeat(params.value?.length || 6),
+      editable: true,
+    },
     {
       field: "specialization",
       headerName: "Chuyên khoa",

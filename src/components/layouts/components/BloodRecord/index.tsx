@@ -339,7 +339,7 @@ export default function BloodRecord({ patient }: IRecord) {
     const res = await predictorVitaminD(inputData);
     const result: VitaminD = res;
     console.log(">>>>res: ", res);
-    setVitaminD(result.vitamin_d_deficiency);
+    setVitaminD(result.probability);
   };
 
   const columns: GridColDef[] = [
@@ -502,9 +502,7 @@ export default function BloodRecord({ patient }: IRecord) {
           <span>
             {vitaminD === undefined || vitaminD === null
               ? ""
-              : vitaminD === 1
-                ? "Thiếu Vitamin D"
-                : "Không Thiếu Vitamin D"}
+              : `Có ${Math.round(vitaminD*100)}% khả năng thiếu Vitamin D`}
           </span>
         </div>
       </div>

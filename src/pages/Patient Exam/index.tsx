@@ -241,6 +241,40 @@ export default function PatientExam() {
     return /^0\d{9}$/.test(phoneNumber);
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
+    if (newRow.fullName === "") {
+      toast.info("Chưa nhập tên bệnh nhân", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!newRow.gender) {
+      toast.info("Chưa chọn giới tính", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!newRow.address) {
+      toast.info("Chưa nhập địa chỉ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    }
     if (
       newRow?.yearOfBirth < 1930 ||
       newRow?.yearOfBirth > 2025 ||
@@ -255,6 +289,7 @@ export default function PatientExam() {
         draggable: true,
         progress: undefined,
       });
+      throw new Error("Invalid Year of birth");
     }
     if (!checkIdentity(newRow?.residentalIdentity)) {
       toast.error("CMND/CCCD không hợp lệ", {
@@ -295,7 +330,7 @@ export default function PatientExam() {
             progress: undefined,
           });
         updatedRow.patientId = res.patientId;
-        handleRegisterExam(updatedRow.patientId!)
+        handleRegisterExam(updatedRow.patientId!);
       } else {
         const res = await updatePatient(updatedRow as Patient);
         if (res)
@@ -366,8 +401,37 @@ export default function PatientExam() {
   };
 
   const handleRegisterExam = async (id: number) => {
-    const registerExam = await createExam(id);
-    console.log(registerExam);
+    try {
+      const registerExam = await createExam(id);
+      if (registerExam) {
+        toast.success("Đăng kí khám bệnh thành công", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      }
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data.message.includes("Maximum number")) {
+          toast.error("Thất bại do đủ giới hạn 40 bệnh nhân trong ngày", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+        }
+      }
+      else {
+        throw new Error("Unknown err")
+      }
+    }
   };
 
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
@@ -471,10 +535,11 @@ export default function PatientExam() {
           />,
           <GridActionsCellItem
             icon={
-              <Tooltip title="Khám bệnh">
+              <Tooltip title="Đăng kí khám bệnh">
                 <AssignmentAddIcon />
               </Tooltip>
-            }            label="Khám bệnh"
+            }
+            label="Khám bệnh"
             onClick={() => handleRegisterExam(row.patientId)}
             color="inherit"
           />,

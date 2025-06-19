@@ -170,12 +170,12 @@ export default function DrugUnitPage() {
 
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
-      setRows(rows.filter((row) => row.id !== id));
       const unitId = rows.find((row) => row.id === id)?.unitId;
       console.log("unitId", unitId);
       try {
         const res = await deleteDrugUnit(unitId);
         if (res) {
+          setRows(rows.filter((row) => row.id !== id));
           toast.success("Xóa thành công", {
             position: "bottom-right",
             autoClose: 2000,
@@ -186,12 +186,24 @@ export default function DrugUnitPage() {
             progress: undefined,
           });
         }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
+      } catch (error: unknown) {
+        console.error("API request failed:", error);
+        if (axios.isAxiosError(error)) {
+          if (
+            error.response?.data.statusCode === 500 &&
+            error.response.data.message.includes("execute statement")
+          ) {
+            toast.error("Thất bại do vi phạm ràng buộc với Loại Thuốc", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+            throw new Error("Foreign key");
+          }
         }
       }
     };
@@ -210,6 +222,18 @@ export default function DrugUnitPage() {
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
     const updatedRow: DrugUnit = { ...(newRow as DrugUnit), isNew: false };
+    if (!updatedRow.unitName) {
+      toast.error("Đơn vị thuốc chưa nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    }
     try {
       if (newRow.isNew) {
         const res = await initialDrugUnit(updatedRow as DrugUnit);
@@ -238,7 +262,7 @@ export default function DrugUnitPage() {
           });
       }
     } catch (error: unknown) {
-      console.log("err: ", error)
+      console.log("err: ", error);
       if (axios.isAxiosError(error)) {
         if (
           error.response?.data.statusCode === 400 &&
@@ -253,7 +277,7 @@ export default function DrugUnitPage() {
             draggable: true,
             progress: undefined,
           });
-          throw new Error("Drug Unit had been already existed")
+          throw new Error("Drug Unit had been already existed");
         }
       } else if (error instanceof Error) {
         console.error("Request Err: " + error.message);

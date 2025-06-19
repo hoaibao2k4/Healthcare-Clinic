@@ -48,6 +48,7 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getAllRoles } from "@/api/apiRole";
+import axios from "axios";
 ////////////
 interface UserRow {
   id: number;
@@ -229,9 +230,107 @@ export default function StaffSupporters() {
     }
   };
 
+  const checkPhoneNumber = (phoneNumber: string) => {
+    return /^0\d{9}$/.test(phoneNumber);
+  };
+  const checkMail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const processRowUpdate = async (newRow: GridRowModel) => {
     const updatedRow: Supporter = { ...(newRow as Supporter), isNew: false };
     console.log(">>>>>>>>>>>: ", updatedRow);
+
+    if (!updatedRow.fullName) {
+      toast.error("Họ tên chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.email) {
+      toast.error("Email chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.phoneNumber) {
+      toast.error("Số điện thoại chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.username) {
+      toast.error("Tài khoản chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.password) {
+      toast.error("Mật khẩu chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.staffTitle) {
+      toast.error("Vị trí chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    }
+    if (!checkPhoneNumber(updatedRow.phoneNumber)) {
+      toast.error("Số điện thoại không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!checkMail(updatedRow.email)) {
+      toast.error("Email không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    }
     const supporter = rows.find(
       (r) => r.supporterId === updatedRow.supporterId
     );
@@ -253,7 +352,7 @@ export default function StaffSupporters() {
           );
           console.log(roleRes);
         }
-        console.log("SUpporter: ", res);
+        console.log("Supporter: ", res);
         if (res)
           toast.success("Thêm nhân viên thành công", {
             position: "bottom-right",
@@ -291,11 +390,54 @@ export default function StaffSupporters() {
         }
       }
     } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+      if (axios.isAxiosError(err)) {
+        if (
+          err.response?.data.statusCode === 409 &&
+          err.response.data.message.includes("Username")
+        ) {
+          toast.error("Tài khoản đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("CCCD và Số điện thoại đã tồn tại");
+        } else if (
+          err.response?.data.statusCode === 409 &&
+          err.response.data.message.includes("Phone")
+        ) {
+          toast.error("Số điện thoại đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Data existed");
+        } else if (
+          err.response?.data.statusCode === 409 &&
+          err.response?.data.message.includes("Email")
+        ) {
+          toast.error("Email đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Data existed");
+        }
+        throw err.response?.data || new Error("Unknown axios error");
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error:", err);
+        throw err;
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
@@ -317,7 +459,13 @@ export default function StaffSupporters() {
       type: "string",
     },
     { field: "username", headerName: "Tài khoản", width: 110, editable: true },
-    { field: "password", headerName: "Mật khẩu", width: 140, editable: true },
+    {
+      field: "password",
+      headerName: "Mật khẩu",
+      width: 140,
+      editable: true,
+      renderCell: (params) => "•".repeat(params.value?.length || 6),
+    },
     { field: "staffTitle", headerName: "Vị trí", width: 100, editable: true },
 
     {

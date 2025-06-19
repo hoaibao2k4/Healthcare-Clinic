@@ -50,14 +50,11 @@ export const updateRecordExam = async (examinationId: number, records: any) => {
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };
@@ -82,18 +79,34 @@ export const predictorVitaminD = async (inputData: any) => {
 
 export const createExam = async (id: number) => {
   try {
-    const res = await response.post(`/api/public/examination/create-examination/${id}`)
-    return res
+    const res = await response.post(
+      `/api/public/examination/create-examination/${id}`
+    );
+    return res;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
+    }
+  }
+};
+
+export const getPatientRecord = async (id: number) => {
+  try {
+    const res = await response.get(
+      `/api/public/examination/record-examination/${id}`
+    );
+    return res.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      throw error || "No status";
+    } else if (error instanceof Error) {
+      throw "Request Err: " + error.message;
+    } else {
+      throw "Unknown error: " + error;
     }
   }
 };

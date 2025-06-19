@@ -1,75 +1,44 @@
-import * as React from 'react';
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
 import { BarChart } from '@mui/x-charts/BarChart';
-import { StackOffsetType } from '@mui/x-charts/models';
 
-type GetSeriesParams = {
-  hasNegativeValue: boolean;
-  stackOffset: StackOffsetType;
-};
+const weekdays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
-const availableStackOffset = ['expand', 'diverging', 'none'] as const;
-
-const getSeries = ({ hasNegativeValue, stackOffset }: GetSeriesParams) => [
+const getSeries = () => [
   {
-    label: 'A',
-    data: [125, 450, 492, 625],
+    label: 'Dưới 18',
+    data: [20, 35, 30, 45, 50, 40, 25],
     stack: 'total',
-    stackOffset,
+    color: '#90caf9', // light blue
   },
   {
-    label: 'B',
-    data: [50, hasNegativeValue ? -150 : 150, 203, 620],
+    label: '18-34',
+    data: [15, 20, 25, 30, 28, 22, 18],
     stack: 'total',
+    color: '#a5d6a7', // light green
   },
   {
-    label: 'C',
-    data: [134, 215, 342, 402].map((y) => (hasNegativeValue ? -y : y)),
+    label: '35-55',
+    data: [10, 15, 20, 25, 30, 35, 20],
     stack: 'total',
+    color: '#f48fb1', // light pink
   },
   {
-    label: 'D',
-    data: [315, 421, 289, 321].map((y) => (hasNegativeValue ? -y : y)),
+    label: 'Trên 55',
+    data: [8, 12, 15, 18, 20, 15, 10],
     stack: 'total',
+    color: '#ffe082', // light yellow-orange
   },
 ];
 
-export default function StackOffsetDemo() {
-  const [stackOffset, setStackOffset] = React.useState<StackOffsetType>('none');
-
-  const [hasNegativeValue, setHasNegativeValue] = React.useState(true);
-
+export default function PatientBarChartByWeekday() {
   return (
-    <Box sx={{ width: '100%', maxWidth: 600 }}>
-      <Stack direction="row">
-        <TextField
-          sx={{ minWidth: 150, mr: 5 }}
-          select
-          label="stackOffset"
-          value={stackOffset}
-          onChange={(event) => setStackOffset(event.target.value as any)}
-        >
-          {availableStackOffset.map((offset) => (
-            <MenuItem key={offset} value={offset}>
-              {offset}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <FormControlLabel
-          checked={hasNegativeValue}
-          onChange={(event) => setHasNegativeValue((event.target as any).checked)}
-          control={<Switch color="primary" />}
-          label="data has negative value"
-          labelPlacement="end"
-        />
-      </Stack>
-      <BarChart height={300} series={getSeries({ hasNegativeValue, stackOffset })} />
+    <Box sx={{ width: '100%', maxWidth: 700, margin: 'auto' }}>
+      <h3 className='text-center font-bold'>Số lượng bệnh nhân theo ngày trong tuần</h3>
+      <BarChart
+        height={350}
+        xAxis={[{ scaleType: 'band', data: weekdays }]}
+        series={getSeries()}
+      />
     </Box>
   );
 }
