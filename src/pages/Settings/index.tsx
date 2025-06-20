@@ -12,17 +12,23 @@ import { getSystemSettings, saveSystemSettings } from "@/api/apiSettings";
 import { SettingItem } from "@/types/settings";
 
 export default function SettingsPage() {
-  const [numberPatientMax, setNumberPatientMax] = React.useState(0);
-  const [examFee, setExamFee] = React.useState(0);
-  const [drugFeePercent, setDrugFeePercent] = React.useState(0);
+  const [numberPatientMax, setNumberPatientMax] = React.useState(40);
+  const [examFee, setExamFee] = React.useState(30);
+  const [drugFeePercent, setDrugFeePercent] = React.useState(1);
 
   const fetchSettings = async () => {
     try {
       const data = await getSystemSettings();
       const map = Object.fromEntries(data.map((s) => [s.key, s.value]));
-      setNumberPatientMax(Number(map["numberPatientMax"] || 0));
-      setExamFee(Number(map["examFee"] || 0));
-      setDrugFeePercent(Number(map["drugFeePercent"] || 0));
+      if (map["numberPatientMax"] !== undefined) {
+        setNumberPatientMax(Number(map["numberPatientMax"]));
+      }
+      if (map["examFee"] !== undefined) {
+        setExamFee(Number(map["examFee"]));
+      }
+      if (map["drugFeePercent"] !== undefined) {
+        setDrugFeePercent(Number(map["drugFeePercent"]));
+      }
     } catch (err) {
       console.error("Lỗi khi load cấu hình:", err);
       toast.error("Không thể tải cấu hình hệ thống", {
@@ -42,9 +48,10 @@ export default function SettingsPage() {
     if (
       numberPatientMax <= 0 ||
       examFee < 0 ||
-      drugFeePercent < 0
+      drugFeePercent < 0 ||
+      drugFeePercent > 100
     ) {
-      toast.error("Giá trị không hợp lệ. Tất cả phải lớn hơn hoặc bằng 0.", {
+      toast.error("Giá trị không hợp lệ. Kiểm tra các trường nhập.", {
         position: "bottom-right",
         autoClose: 2000,
         pauseOnHover: true,
