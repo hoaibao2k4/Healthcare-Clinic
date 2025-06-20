@@ -1,11 +1,11 @@
 import { response } from "@/services/axios";
 import axios from "axios";
-import { SystemSettings } from "@/types/settings";
-export const getSystemSettings = async ()=> {
+import { SettingItem } from "@/types/settings";
+
+export const getSystemSettings = async () => {
   try {
     const res = await response.get("/api/public/parameter/get-parameter");
-    const data = Array.isArray(res.data) ? res.data[0] : res.data;
-    return data as SystemSettings;
+    return res.data; 
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       console.error(
@@ -19,19 +19,14 @@ export const getSystemSettings = async ()=> {
   }
 };
 
-
-export const saveSystemSettings = async (data: SystemSettings & { id: number }) => {
+export const saveSystemSettings = async (data: SettingItem[]) => {
   try {
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, value.toString());
+    data.forEach((item) => {
+      formData.append(item.key, String(item.value ?? ""));
     });
 
-    const res = await response.patch(
-      "/api/public/parameter/edit-parameter",
-      formData
-    );
-    return res.data;
+    await response.patch("/api/public/parameter/edit-parameter", formData);
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       console.error(
