@@ -5,7 +5,7 @@ import { SettingItem } from "@/types/settings";
 export const getSystemSettings = async () => {
   try {
     const res = await response.get("/api/public/parameter/get-parameter");
-    return res.data; // Trả về mảng SettingItem[]
+    return res.data; 
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       console.error(
