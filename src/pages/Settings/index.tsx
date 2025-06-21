@@ -13,7 +13,7 @@ import { SettingItem } from "@/types/settings";
 
 export default function SettingsPage() {
   const [numberPatientMax, setNumberPatientMax] = React.useState(40);
-  const [examFee, setExamFee] = React.useState(30);
+  const [examFee, setExamFee] = React.useState(30000);
   const [drugFeePercent, setDrugFeePercent] = React.useState(1);
 
   const fetchSettings = async () => {
@@ -45,13 +45,31 @@ export default function SettingsPage() {
   }, []);
 
   const handleSave = async () => {
-    if (
-      numberPatientMax <= 0 ||
-      examFee < 0 ||
-      drugFeePercent < 0 ||
-      drugFeePercent > 100
-    ) {
-      toast.error("Giá trị không hợp lệ. Kiểm tra các trường nhập.", {
+    if (numberPatientMax <= 0 || !Number.isInteger(numberPatientMax)) {
+      toast.error("Số bệnh nhân phải là số nguyên dương", {
+        position: "bottom-right",
+
+        autoClose: 2000,
+
+        pauseOnHover: true,
+
+        draggable: true,
+      });
+      return;
+    }
+    if (examFee < 0 || !Number.isInteger(examFee)) {
+      toast.error("Tiền khám phải là số nguyên lớn hơn 0", {
+        position: "bottom-right",
+        autoClose: 2000,
+        pauseOnHover: true,
+        draggable: true,
+      });
+
+      return;
+    }
+
+    if (drugFeePercent < 0 || drugFeePercent > 100) {
+      toast.error("Tỉ lệ phụ phí thuốc phải từ 0 đến 100%", {
         position: "bottom-right",
         autoClose: 2000,
         pauseOnHover: true,
@@ -105,6 +123,7 @@ export default function SettingsPage() {
               input: {
                 inputProps: {
                   min: 0,
+                  step: 1,
                   inputMode: "numeric",
                 },
               },
@@ -120,6 +139,7 @@ export default function SettingsPage() {
               input: {
                 inputProps: {
                   min: 0,
+                  step: 1,
                   inputMode: "numeric",
                 },
               },
@@ -135,7 +155,8 @@ export default function SettingsPage() {
               input: {
                 inputProps: {
                   min: 0,
-                  inputMode: "numeric",
+                  max: 100,
+                  inputMode: "decimal",
                 },
               },
             }}
