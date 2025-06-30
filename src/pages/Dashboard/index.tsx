@@ -36,7 +36,7 @@ export default function DashBoard() {
           <div className="absolute top-1/4 left-10 text-slate-50">
             <h2 className="text-xl font-semibold">Chào buổi sáng,</h2>
             <p className="text-4xl py-1 font-bold">
-              Endocrinologist. Loc Nguyen
+              Bác sĩ Lộc Nguyễn
             </p>
             <p className="text-lg">Chúc bạn một ngày làm việc tốt lành</p>
           </div>

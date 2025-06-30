@@ -215,6 +215,17 @@ export default function PatientRecords() {
         progress: undefined,
       });
       throw new Error("Invalid Null");
+    } else if (quantity > selectedDrug?.quantity!) {
+      toast.error("Số lượng thuốc không đủ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
     } else {
       setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
       toast.success("Thêm thuốc thành công", {
@@ -236,8 +247,8 @@ export default function PatientRecords() {
   };
 
   const handleSaveRecord = async () => {
-    if (!(rows && selectedDiagnosis && selectedSymptom)) {
-      toast.error("Bệnh nhân chưa được khám", {
+    if (!patient) {
+      toast.error("Chưa có thông tin bệnh nhân", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -246,8 +257,8 @@ export default function PatientRecords() {
         draggable: true,
         progress: undefined,
       });
-    } else if (rows.length < 1) {
-      toast.error("Bác sĩ chưa kê đơn thuốc", {
+    } else if (!(rows && selectedDiagnosis && selectedSymptom)) {
+      toast.error("Bệnh nhân chưa được khám", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -276,7 +287,7 @@ export default function PatientRecords() {
         const resRecord = await updateRecordExam(patient?.examId, rows);
         console.log("res: ", res);
         console.log("res cord: ", resRecord);
-        if (res && resRecord) {
+        if (res) {
           toast.success("Lưu thông tin thành công", {
             position: "bottom-right",
             autoClose: 2000,
@@ -355,7 +366,7 @@ export default function PatientRecords() {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 120,
       cellClassName: "actions",
       getActions: ({ id }) => {

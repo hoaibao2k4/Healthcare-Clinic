@@ -3,12 +3,14 @@ import axios from "axios";
 import qs from "qs";
 export const updateExam = async (
   examinationId: number,
-  symptoms: string,
-  diseaseId: string
+  symptoms?: string | null,
+  diseaseId?: string | null,
+  isExam?: boolean
 ) => {
   const formData = qs.stringify({
     symptoms,
     diseaseId,
+    isExam,
   });
   try {
     const res = await response.patch(
@@ -23,14 +25,11 @@ export const updateExam = async (
     return res.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };

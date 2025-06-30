@@ -13,15 +13,22 @@ import { SettingItem } from "@/types/settings";
 
 export default function SettingsPage() {
   const [numberPatientMax, setNumberPatientMax] = React.useState(40);
-  const [examFee, setExamFee] = React.useState(30);
+  const [examFee, setExamFee] = React.useState(30000);
   const [drugFeePercent, setDrugFeePercent] = React.useState(1);
 
   const fetchSettings = async () => {
     try {
       const data = await getSystemSettings();
-      const map = Object.fromEntries(data.map((s) => [s.key, s.value]));
+      data.map((item: any) => {
+        setNumberPatientMax(item.numberPatientMax);
+        setExamFee(item.examFee);
+        setDrugFeePercent(drugFeePercent);
+      });
+      console.log(data)
+
+      const map = Object.fromEntries(data.map((s: any) => [s.key, s.value]));
       if (map["numberPatientMax"] !== undefined) {
-        setNumberPatientMax(Number(map["numberPatientMax"]));
+        setNumberPatientMax(data[0].numberPatientMax);
       }
       if (map["examFee"] !== undefined) {
         setExamFee(Number(map["examFee"]));

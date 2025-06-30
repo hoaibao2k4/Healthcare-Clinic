@@ -36,13 +36,15 @@ import {
   initialPatient,
   updatePatient,
 } from "@/api/apiPatients";
-import { Patient } from "@/types";
+import { Patient, Permission } from "@/types";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import BasicDatePicker from "@/components/layouts/components/DatePicker";
 import axios from "axios";
 import { createExam } from "@/api/apiExam";
 import Tooltip from "@mui/material/Tooltip";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -97,10 +99,56 @@ declare module "@mui/x-data-grid" {
 }
 ////////////
 
+export const hasPermission = (
+  permissions: Permission[],
+  permissionKey: string,
+  action: "create" | "update" | "read" | "delete"
+): boolean => {
+  const permission = permissions.find((p) => p.permission === permissionKey);
+
+  if (!permission) return false;
+
+  switch (action) {
+    case "create":
+      return permission.can_create;
+    case "update":
+      return permission.can_update;
+    case "read":
+      return permission.can_read;
+    case "delete":
+      return permission.can_delete;
+    default:
+      return false;
+  }
+};
+
 function EditToolbar(props: GridSlotProps["toolbar"]) {
   const { setRows, setRowModesModel } = props;
+  const permissions = useSelector(
+    (state: RootState) => state.permission.login.currentUser
+  );
+  const handleClick = (permissions: any) => {
+    let checkPermission;
+    if (permissions && permissions.permissionList) {
+      checkPermission = hasPermission(
+        permissions.permissionList,
+        "exams",
+        "create"
+      );
 
-  const handleClick = () => {
+      if (!checkPermission) {
+        toast.error("Không thể tạo mới do không đủ quyền hạn", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        throw new Error("Not Allow");
+      }
+    }
     const id = Math.floor(Math.random() * 100);
     setRows((oldRows) => [
       ...oldRows,
@@ -127,7 +175,7 @@ function EditToolbar(props: GridSlotProps["toolbar"]) {
         color="primary"
         startIcon={<AddIcon />}
         size="large"
-        onClick={handleClick}
+        onClick={() => handleClick(permissions)}
       ></Button>
     </GridToolbarContainer>
   );
@@ -140,7 +188,7 @@ export default function PatientExam() {
     {}
   );
   const [id, setId] = useState<number>(1);
-  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -195,12 +243,12 @@ export default function PatientExam() {
 
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
-      setRows(rows.filter((row) => row.id !== id));
       const patientId = rows.find((row) => row.id === id)?.patientId;
       console.log("patientId", patientId);
       try {
         const res = await deletePatient(patientId);
         if (res) {
+          setRows(rows.filter((row) => row.id !== id));
           toast.success("Xóa bệnh nhân thành công", {
             position: "bottom-right",
             autoClose: 2000,
@@ -211,12 +259,24 @@ export default function PatientExam() {
             progress: undefined,
           });
         }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
+      } catch (error: unknown) {
+        console.error("API request failed:", error);
+        if (axios.isAxiosError(error)) {
+          if (
+            error.response?.data.statusCode === 500 &&
+            error.response.data.message.includes("execute statement")
+          ) {
+            toast.error("Xóa thất bại do bệnh nhân đã được đăng kí khám", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+            throw new Error("Foreign key");
+          }
         }
       }
     };
@@ -240,7 +300,9 @@ export default function PatientExam() {
   const chekckPhoneNumber = (phoneNumber: string) => {
     return /^0\d{9}$/.test(phoneNumber);
   };
+
   const processRowUpdate = async (newRow: GridRowModel) => {
+    console.log("new row: ", newRow);
     if (newRow.fullName === "") {
       toast.info("Chưa nhập tên bệnh nhân", {
         position: "bottom-right",
@@ -252,7 +314,7 @@ export default function PatientExam() {
         progress: undefined,
       });
       throw new Error("Invalid Null");
-    } else if (!newRow.gender) {
+    } else if (newRow.gender === null) {
       toast.info("Chưa chọn giới tính", {
         position: "bottom-right",
         autoClose: 2000,
@@ -427,9 +489,8 @@ export default function PatientExam() {
             progress: undefined,
           });
         }
-      }
-      else {
-        throw new Error("Unknown err")
+      } else {
+        throw new Error("Unknown err");
       }
     }
   };
@@ -493,7 +554,7 @@ export default function PatientExam() {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 160,
       cellClassName: "actions",
       getActions: ({ id, row }) => {
@@ -576,9 +637,6 @@ export default function PatientExam() {
             }}
           />
         </Box>
-
-        {/*Sửa ngày khám bên phải */}
-        <BasicDatePicker />
       </div>
       <div>
         <Box

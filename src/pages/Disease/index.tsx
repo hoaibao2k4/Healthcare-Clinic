@@ -232,6 +232,17 @@ export default function DiseasePage() {
         progress: undefined,
       });
       throw new Error("Invalid Null");
+    } else if (!newRow.description) {
+      toast.error("Mô tả không được để trống", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Unit is empty");
     }
     try {
       if (newRow.isNew) {

@@ -62,7 +62,7 @@ import {
 const initialRows: GridRowsProp = [
   {
     id: randomId(),
-    permission: "Danh sách chờ khám bệnh",
+    permission: "Danh sách khám bệnh",
     permission_id: null,
     permission_name: "waiting",
     can_read: false,
@@ -71,7 +71,7 @@ const initialRows: GridRowsProp = [
   },
   {
     id: randomId(),
-    permission: "Danh sách khám bệnh",
+    permission: "Danh sách đăng kí khám",
     permission_id: null,
     permission_name: "exams",
     can_read: false,
@@ -209,13 +209,14 @@ export default function PermissionTable() {
       const matched = apiPermission.find(
         (item) => item.permission === row.permission_name
       );
-    console.log(apiPermission)
+      console.log(apiPermission);
       return {
         ...row,
         permission_id: matched?.permission_id,
         can_create: matched?.can_create || false,
         can_read: matched?.can_read || false,
         can_update: matched?.can_update || false,
+        can_delete: matched?.can_delete || false,
       };
     });
   };
@@ -225,7 +226,10 @@ export default function PermissionTable() {
       try {
         if (permissionUser && permissionUser?.accessToken) {
           const roleRes = await getAllRoles(permissionUser?.accessToken);
-          setRoles(roleRes);
+          const roleWithoutAdmin = roleRes.filter(
+            (item: Role) => item.role_name !== "ADMIN"
+          );
+          setRoles(roleWithoutAdmin);
         }
       } catch (err: any) {
         console.error("Fetch API failed:");
@@ -322,7 +326,7 @@ export default function PermissionTable() {
         can_create: updatedRow.can_create,
         can_read: updatedRow.can_read,
         can_update: updatedRow.can_update,
-        can_delete: false,
+        can_delete: updatedRow.can_delete,
         role: selectedRole,
       };
       console.log(">>>>>>>>", data);
@@ -417,9 +421,16 @@ export default function PermissionTable() {
       type: "boolean",
     },
     {
+      field: "can_delete",
+      headerName: "Delete",
+      width: 100,
+      editable: true,
+      type: "boolean",
+    },
+    {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 160,
       cellClassName: "actions",
       getActions: ({ id }) => {

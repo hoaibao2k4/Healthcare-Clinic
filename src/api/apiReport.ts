@@ -27,7 +27,7 @@ export const getDrugsReport = async (month: number, year: number) => {
     const res = await response.get(
      `/api/public/drugs-usage-report/get-drugs-usage-report?month=${month}&year=${year}`
     );
-    return res.data?.data?.paginationDTO?.data ?? [];
+    return res.data.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
       console.error(

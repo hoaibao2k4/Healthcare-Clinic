@@ -105,10 +105,11 @@ export default function DrugUsagePage() {
 
   useEffect(() => {
     fetchDrugUnit().then(() => handleFetch(false));
-  }, []);
+  }, [month, year]);
   const fetchDrugUnit = async () => {
     try {
       const res = await getAllDrugUnits();
+
       setUnitOptions(res);
     } catch (err: any) {
       console.error("Fetch API failed:", err);
@@ -123,7 +124,8 @@ export default function DrugUsagePage() {
   const handleFetch = async (showToast = true) => {
     if (!validateInputs(month, year, topN)) return;
     try {
-      const res: DrugReport[] = await getDrugsReport(month, year);
+      const res : DrugReport[] = await getDrugsReport(month, year);
+      console.log(res);
       if (!res || !Array.isArray(res)) {
         if (!hasShownError) {
           toast.error("Invalid API response.", {
@@ -144,17 +146,19 @@ export default function DrugUsagePage() {
         ? res.map((item: DrugReport, index: number) => ({
             id: index + 1,
 
-            drugId: item.drug?.[0]?.drugId ?? 0,
+            drugId: item.drug.drugId ?? 0,
 
-            drugName: item.drug?.[0]?.drugName ?? "",
+            drugName: item.drug.drugName ?? "",
 
-            unitName: item.drug?.[0]?.drugsUnit?.unitName ?? "",
+            unitName: item.drug.drugsUnit?.unitName ?? "",
 
             usedNumber: item.usageNumber,
 
             isNew: false,
           }))
         : [];
+
+      console.log(formatted)
 
       setRows(formatted);
       const sorted = [...formatted]
@@ -338,53 +342,53 @@ export default function DrugUsagePage() {
       width: 180,
       editable: true,
     },
-    {
-      field: "actions",
-      type: "actions",
-      headerName: "Thao tác",
-      width: 100,
-      cellClassName: "actions",
+    // {
+    //   field: "actions",
+    //   type: "actions",
+    //   headerName: "Thao tác",
+    //   width: 100,
+    //   cellClassName: "actions",
 
-      getActions: ({ id }) => {
-        const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
+    //   getActions: ({ id }) => {
+    //     const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
 
-        if (isInEditMode) {
-          return [
-            <GridActionsCellItem
-              icon={<SaveIcon />}
-              label="Save"
-              sx={{
-                color: "primary.main",
-              }}
-              onClick={handleSaveClick(id)}
-            />,
-            <GridActionsCellItem
-              icon={<CancelIcon />}
-              label="Cancel"
-              className="textPrimary"
-              onClick={handleCancelClick(id)}
-              color="inherit"
-            />,
-          ];
-        }
+    //     if (isInEditMode) {
+    //       return [
+    //         <GridActionsCellItem
+    //           icon={<SaveIcon />}
+    //           label="Save"
+    //           sx={{
+    //             color: "primary.main",
+    //           }}
+    //           onClick={handleSaveClick(id)}
+    //         />,
+    //         <GridActionsCellItem
+    //           icon={<CancelIcon />}
+    //           label="Cancel"
+    //           className="textPrimary"
+    //           onClick={handleCancelClick(id)}
+    //           color="inherit"
+    //         />,
+    //       ];
+    //     }
 
-        return [
-          <GridActionsCellItem
-            icon={<EditIcon />}
-            label="Edit"
-            className="textPrimary"
-            onClick={handleEditClick(id)}
-            color="inherit"
-          />,
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={handleDeleteClick(id)}
-            color="inherit"
-          />,
-        ];
-      },
-    },
+    //     return [
+    //       <GridActionsCellItem
+    //         icon={<EditIcon />}
+    //         label="Edit"
+    //         className="textPrimary"
+    //         onClick={handleEditClick(id)}
+    //         color="inherit"
+    //       />,
+    //       <GridActionsCellItem
+    //         icon={<DeleteIcon />}
+    //         label="Delete"
+    //         onClick={handleDeleteClick(id)}
+    //         color="inherit"
+    //       />,
+    //     ];
+    //   },
+    // },
   ];
 
   return (

@@ -121,23 +121,23 @@ const initialRows: GridRowsProp = [
 
 const raceList = [
   {
-    raceName: "Mexican American",
+    raceName: "Người Châu Á",
     raceId: 1,
   },
   {
-    raceName: "Other Hispanic",
+    raceName: "Người Châu Âu",
     raceId: 2,
   },
   {
-    raceName: "Non-Hispanic White",
+    raceName: "Người Châu Mĩ",
     raceId: 3,
   },
   {
-    raceName: "Non-Hispanic Black",
+    raceName: "Người Châu Phi",
     raceId: 4,
   },
   {
-    raceName: "Other Race - Including Multi-Racial",
+    raceName: "Chủng tộc khác",
     raceId: 5,
   },
 ];
@@ -502,7 +502,7 @@ export default function BloodRecord({ patient }: IRecord) {
           <span>
             {vitaminD === undefined || vitaminD === null
               ? ""
-              : `Có ${Math.round(vitaminD*100)}% khả năng thiếu Vitamin D`}
+              : `Có ${Math.round(vitaminD * 100)}% khả năng thiếu Vitamin D`}
           </span>
         </div>
       </div>
