@@ -135,8 +135,14 @@ export default function StaffDoctors() {
         if (permissionUser && permissionUser.accessToken) {
           const res = await getAllDoctors(permissionUser?.accessToken);
           const roleResponse = await getAllRoles(permissionUser.accessToken);
-          const roleNames = roleResponse.map((item: Role) => item.role_name);
+          const roleWithoutAdmin = roleResponse.filter(
+            (item: Role) => item.role_name !== "ADMIN"
+          );
+          const roleNames = roleWithoutAdmin.map(
+            (item: Role) => item.role_name
+          );
           setRoleOptions(roleNames);
+          console.log(roleNames)
           const dataWithId = res.map((item: Role, index: number) => ({
             ...item,
             id: id + index,

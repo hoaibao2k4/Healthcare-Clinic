@@ -8,8 +8,6 @@ import {
   permissionStart,
   permissionSuccess,
 } from "@/redux/permissionSlice";
-import { toast } from "react-toastify";
-
 
 export const adminLogin = async (
   username: string,
@@ -24,53 +22,21 @@ export const adminLogin = async (
       password,
     });
     if (typeof res === "object" && "data" in res) {
-      if (res.statusCode === 200) {
+      console.log(res.data.available_roles.length)
+      if (res.data.available_roles.length >= 1) {
         dispatch(loginSuccess(res.data));
         navigate("/dashboard");
-        toast.success("Đăng nhập thành công!", {
-          position: "bottom-right",
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
       }
     }
     return res;
   } catch (error: unknown) {
     dispatch(loginFail());
     if (axios.isAxiosError(error)) {
-      if (error.status === 401) {
-        toast.error("Sai tài khoản hoặt mật khẩu!", {
-          position: "bottom-right",
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-      } else {
-        toast.error("Lỗi đăng nhập!", {
-          position: "bottom-right",
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-      }
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };

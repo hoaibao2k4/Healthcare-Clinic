@@ -57,7 +57,7 @@ type NavigationItemWithPermission =
 const NAVIGATION: NavigationItemWithPermission[] = [
   {
     kind: "header",
-    title: "Main items",
+    title: "Chức năng",
   },
   {
     segment: "dashboard",
@@ -107,13 +107,13 @@ const NAVIGATION: NavigationItemWithPermission[] = [
   },
   {
     segment: "exams",
-    title: "Danh sách khám bệnh",
+    title: "Danh sách đăng kí khám",
     icon: <FeaturedPlayListIcon />,
     permissions: ["SUPPORTER", "ADMIN"],
   },
   {
     segment: "waiting",
-    title: "Danh sách chờ khám bệnh",
+    title: "Danh sách khám bệnh",
     icon: <FeaturedPlayListIcon />,
     permissions: ["DOCTOR"],
   },
@@ -166,7 +166,7 @@ const NAVIGATION: NavigationItemWithPermission[] = [
   },
   {
     kind: "header",
-    title: "Analytics",
+    title: "Phân tích",
   },
   {
     segment: "reports",
@@ -204,16 +204,17 @@ function filterNavigationByPermission(
   return items
     .map((item) => {
       if (item.kind === "header" || item.kind === "divider") return item;
-      if (item.segment === "dashboard") //|| item.segment === "integrations")
-       return item;
+      if (item.segment === "dashboard")
+        //|| item.segment === "integrations")
+        return item;
       if (
-        role === "ADMIN" &&
-        (item.segment === "staff" ||
-          item.segment === "admin" ||
-          item.segment === "invoice" ||
-          item.segment === "drugs" ||
-          item.segment === "reports" ||
-          item.segment === "integrations")
+        role === "ADMIN"
+        // (item.segment === "staff" ||
+        //   item.segment === "admin" ||
+        //   item.segment === "invoice" ||
+        //   item.segment === "drugs" ||
+        //   item.segment === "reports" ||
+        //   item.segment === "integrations")
       ) {
         return {
           ...item,
@@ -298,6 +299,7 @@ export default function DefaultLayout({
   const permission = useSelector(
     (state: RootState) => state.permission.login.currentUser
   );
+
   const [session, setSession] = React.useState<Session | null>({
     user: {
       name: user?.username,
@@ -326,6 +328,7 @@ export default function DefaultLayout({
   }, [user]);
   //
   let navigation;
+  console.log(permission)
 
   if (permission) {
     navigation = filterNavigationByPermission(

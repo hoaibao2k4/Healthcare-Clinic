@@ -117,12 +117,9 @@ export const deletePatient = async (patientId: string) => {
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
-      console.error(
-        err.response?.data || err.message,
-        err.response?.status || "No status"
-      );
+      throw err || "No status";
     } else {
-      console.error("Unknown error:", err);
+      throw err;
     }
   }
 };

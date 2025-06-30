@@ -140,7 +140,10 @@ export default function RoleTable() {
             ...item,
             id: id + index,
           }));
-          setRows(dataWithId);
+          const roleWithoutAdmin = dataWithId.filter(
+            (item: Role) => item.role_name !== "ADMIN"
+          );
+          setRows(roleWithoutAdmin);
           setId(id + res.length);
         }
       } catch (err: any) {
@@ -226,6 +229,9 @@ export default function RoleTable() {
     }
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
+    const matchedRole = (rows as Role[]).find(
+      (item) => item.role_name === newRow.role_name
+    );
     const updatedRow: Role = { ...(newRow as Role), isNew: false };
     if (!updatedRow.role_name) {
       toast.error("Chưa nhập vai trò", {
@@ -240,6 +246,17 @@ export default function RoleTable() {
       throw new Error("Invalid null");
     } else if (!updatedRow.description) {
       toast.error("Chưa nhập mô tả", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (matchedRole?.role_name === updatedRow.role_name) {
+      toast.error("Vai trò đã tồn tại", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,

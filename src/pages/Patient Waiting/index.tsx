@@ -40,6 +40,8 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import BasicDatePicker from "@/components/layouts/components/DatePicker";
 import { Tooltip } from "@mui/material";
+import { updateExam } from "@/api/apiExam";
+import axios from "axios";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -136,6 +138,7 @@ export default function PatientWaiting() {
   const [id, setId] = useState<number>(1);
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(dayjs());
+  const [check, setCheck] = useState(0);
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -267,7 +270,48 @@ export default function PatientWaiting() {
   const handleExaminate = (id: GridRowId) => {
     const patient = rows.find((row) => row.id === id);
     console.log(patient);
-    navigate("/records", { state: { patient } });
+
+    if (patient?.isExam === true) {
+      navigate("/records", { state: { patient } });
+    } else {
+      toast.error("Không thể do đã hủy khám bệnh nhân", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
+  };
+
+  const handleCancelExam = async (id: GridRowId) => {
+    const patient = rows.find((row) => row.id === id);
+    console.log(patient);
+    try {
+      const res = await updateExam(patient?.examId, null, null, false);
+      if (res) {
+        toast.success("Hủy khám thành công", {
+          position: "bottom-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        setCheck(1);
+      }
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        throw error || "No status";
+      } else if (error instanceof Error) {
+        throw "Request Err: " + error.message;
+      } else {
+        throw "Unknown error: " + error;
+      }
+    }
   };
   const columns: GridColDef[] = [
     { field: "fullName", headerName: "Họ và tên", width: 200, editable: true },
@@ -310,7 +354,7 @@ export default function PatientWaiting() {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 160,
       cellClassName: "actions",
       getActions: ({ id }) => {
@@ -344,12 +388,16 @@ export default function PatientWaiting() {
           //   onClick={handleEditClick(id)}
           //   color="inherit"
           // />,
-          // <GridActionsCellItem
-          //   icon={<DeleteIcon />}
-          //   label="Delete"
-          //   onClick={handleDeleteClick(id)}
-          //   color="inherit"
-          // />,
+          <GridActionsCellItem
+            icon={
+              <Tooltip title="Hủy khám">
+                <DeleteIcon />
+              </Tooltip>
+            }
+            label="Delete"
+            onClick={() => handleCancelExam(id)}
+            color="inherit"
+          />,
           <GridActionsCellItem
             icon={
               <Tooltip title="Khám bệnh">

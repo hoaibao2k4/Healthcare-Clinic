@@ -103,10 +103,11 @@ export default function RevenuePage() {
   const handleFetch = async (showToast = true) => {
     if (!validateRevenueInputs(month, year, MIN_YEAR, MAX_YEAR)) return;
     try {
-      const res: Revenue = await getRevenueReport(month, year);
+      console.log(month);
+      const res = await getRevenueReport(month, year);
       console.log("API response: ", res);
 
-      const dayReports = res?.dayReports || [];
+      const dayReports: DayReport[] = res[0]?.dayReports || [];
       console.log("dayReports API:", dayReports);
 
       //
@@ -138,9 +139,12 @@ export default function RevenuePage() {
         ...item,
         id: (index + 1).toString(),
       }));
-
+      const allRevenue = dayReports.reduce(
+        (total, current) => total + current.revenue,
+        0
+      );
       setRows(formatted);
-      setTotalRevenue(res?.totalRevenue || 0);
+      setTotalRevenue(allRevenue || 0);
 
       if (formatted.length === 0 && showToast) {
         toast.info("No revenue data found", {
@@ -205,7 +209,7 @@ export default function RevenuePage() {
 
   useEffect(() => {
     handleFetch(false);
-  }, []);
+  }, [month, year]);
 
   const handleEditClick = (id: GridRowId) => {
     return () => {
@@ -376,54 +380,54 @@ export default function RevenuePage() {
       width: 180,
       editable: true,
     },
-    {
-      field: "actions",
-      type: "actions",
-      cellClassName: "actions",
-      headerName: "Thao tác",
-      width: 100,
-      getActions: (params) => {
-        const isInEditMode =
-          rowModesModel[params.id]?.mode === GridRowModes.Edit;
-        const actions = [];
-        if (isInEditMode) {
-          actions.push(
-            <GridActionsCellItem
-              icon={<SaveIcon />}
-              label="Save"
-              sx={{
-                color: "primary.main",
-              }}
-              onClick={handleSaveClick(params.id)}
-            />,
-            <GridActionsCellItem
-              icon={<CancelIcon />}
-              label="Cancel"
-              className="textPrimary"
-              onClick={handleCancelClick(params.id)}
-              color="inherit"
-            />
-          );
-        } else {
-          actions.push(
-            <GridActionsCellItem
-              icon={<EditIcon />}
-              label="Edit"
-              className="textPrimary"
-              onClick={handleEditClick(params.id)}
-              color="inherit"
-            />,
-            <GridActionsCellItem
-              icon={<DeleteIcon />}
-              label="Delete"
-              onClick={handleDeleteClick(params.id)}
-              color="inherit"
-            />
-          );
-        }
-        return actions;
-      },
-    },
+    // {
+    //   field: "actions",
+    //   type: "actions",
+    //   cellClassName: "actions",
+    //   headerName: "Thao tác",
+    //   width: 100,
+    //   getActions: (params) => {
+    //     const isInEditMode =
+    //       rowModesModel[params.id]?.mode === GridRowModes.Edit;
+    //     const actions = [];
+    //     if (isInEditMode) {
+    //       actions.push(
+    //         <GridActionsCellItem
+    //           icon={<SaveIcon />}
+    //           label="Save"
+    //           sx={{
+    //             color: "primary.main",
+    //           }}
+    //           onClick={handleSaveClick(params.id)}
+    //         />,
+    //         <GridActionsCellItem
+    //           icon={<CancelIcon />}
+    //           label="Cancel"
+    //           className="textPrimary"
+    //           onClick={handleCancelClick(params.id)}
+    //           color="inherit"
+    //         />
+    //       );
+    //     } else {
+    //       actions.push(
+    //         <GridActionsCellItem
+    //           icon={<EditIcon />}
+    //           label="Edit"
+    //           className="textPrimary"
+    //           onClick={handleEditClick(params.id)}
+    //           color="inherit"
+    //         />,
+    //         <GridActionsCellItem
+    //           icon={<DeleteIcon />}
+    //           label="Delete"
+    //           onClick={handleDeleteClick(params.id)}
+    //           color="inherit"
+    //         />
+    //       );
+    //     }
+    //     return actions;
+    //   },
+    //},
   ];
 
   return (
