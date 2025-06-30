@@ -62,7 +62,7 @@ import {
 const initialRows: GridRowsProp = [
   {
     id: randomId(),
-    permission: "Danh sách chờ khám bệnh",
+    permission: "Danh sách khám bệnh",
     permission_id: null,
     permission_name: "waiting",
     can_read: false,
@@ -71,7 +71,7 @@ const initialRows: GridRowsProp = [
   },
   {
     id: randomId(),
-    permission: "Danh sách khám bệnh",
+    permission: "Danh sách đăng kí khám",
     permission_id: null,
     permission_name: "exams",
     can_read: false,
@@ -87,29 +87,29 @@ const initialRows: GridRowsProp = [
     can_create: false,
     can_update: false,
   },
-  {
-    id: randomId(),
-    permission: "Danh sách bệnh nhân (trong ngày)",
-    permission_id: null,
-    permission_name: "patients",
-    can_read: false,
-    can_create: false,
-    can_update: false,
-  },
-  {
-    id: randomId(),
-    permission: "Hóa đơn (trong ngày)",
-    permission_id: null,
-    permission_name: "invoicez",
-    can_read: false,
-    can_create: false,
-    can_update: false,
-  },
+  // {
+  //   id: randomId(),
+  //   permission: "Danh sách bệnh nhân (trong ngày)",
+  //   permission_id: null,
+  //   permission_name: "patients",
+  //   can_read: false,
+  //   can_create: false,
+  //   can_update: false,
+  // },
+  // {
+  //   id: randomId(),
+  //   permission: "Hóa đơn (trong ngày)",
+  //   permission_id: null,
+  //   permission_name: "invoicez",
+  //   can_read: false,
+  //   can_create: false,
+  //   can_update: false,
+  // },
   {
     id: randomId(),
     permission: "Quản lí bệnh nhân",
     permission_id: null,
-    permission_name: "all_patients",
+    permission_name: "patients",
     can_read: false,
     can_create: false,
     can_update: false,
@@ -194,8 +194,7 @@ export default function PermissionTable() {
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>(
     {}
   );
-  const [id, setId] = useState<number>(1);
-  const navigate = useNavigate();
+
   const [role, setRole] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const permissionUser = useSelector(
@@ -210,12 +209,14 @@ export default function PermissionTable() {
       const matched = apiPermission.find(
         (item) => item.permission === row.permission_name
       );
+      console.log(apiPermission);
       return {
         ...row,
         permission_id: matched?.permission_id,
         can_create: matched?.can_create || false,
         can_read: matched?.can_read || false,
         can_update: matched?.can_update || false,
+        can_delete: matched?.can_delete || false,
       };
     });
   };
@@ -225,7 +226,10 @@ export default function PermissionTable() {
       try {
         if (permissionUser && permissionUser?.accessToken) {
           const roleRes = await getAllRoles(permissionUser?.accessToken);
-          setRoles(roleRes);
+          const roleWithoutAdmin = roleRes.filter(
+            (item: Role) => item.role_name !== "ADMIN"
+          );
+          setRoles(roleWithoutAdmin);
         }
       } catch (err: any) {
         console.error("Fetch API failed:");
@@ -256,34 +260,34 @@ export default function PermissionTable() {
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
   };
 
-  const handleDeleteClick = (id: GridRowId) => {
-    return async () => {
-      setRows(rows.filter((row) => row.id !== id));
-      const patientId = rows.find((row) => row.id === id)?.patientId;
-      console.log("patientId", patientId);
-      try {
-        // const res = await deletePatient(patientId);
-        // if (res) {
-        //   toast.success("Xóa bệnh nhân thành công", {
-        //     position: "bottom-right",
-        //     autoClose: 2000,
-        //     hideProgressBar: false,
-        //     closeOnClick: true,
-        //     pauseOnHover: true,
-        //     draggable: true,
-        //     progress: undefined,
-        //   });
-        // }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
-        }
-      }
-    };
-  };
+  // const handleDeleteClick = (id: GridRowId) => {
+  //   return async () => {
+  //     setRows(rows.filter((row) => row.id !== id));
+  //     const patientId = rows.find((row) => row.id === id)?.patientId;
+  //     console.log("patientId", patientId);
+  //     try {
+  //       // const res = await deletePatient(patientId);
+  //       // if (res) {
+  //       //   toast.success("Xóa bệnh nhân thành công", {
+  //       //     position: "bottom-right",
+  //       //     autoClose: 2000,
+  //       //     hideProgressBar: false,
+  //       //     closeOnClick: true,
+  //       //     pauseOnHover: true,
+  //       //     draggable: true,
+  //       //     progress: undefined,
+  //       //   });
+  //       // }
+  //     } catch (err: any) {
+  //       console.error("API request failed:", err);
+  //       if (err.name === "TypeError") {
+  //         console.error("Network error or CORS issue:", err.message);
+  //       } else {
+  //         console.error("Unexpected error:", err.message || err);
+  //       }
+  //     }
+  //   };
+  // };
 
   const handleCancelClick = (id: GridRowId) => () => {
     setRowModesModel({
@@ -322,7 +326,7 @@ export default function PermissionTable() {
         can_create: updatedRow.can_create,
         can_read: updatedRow.can_read,
         can_update: updatedRow.can_update,
-        can_delete: false,
+        can_delete: updatedRow.can_delete,
         role: selectedRole,
       };
       console.log(">>>>>>>>", data);
@@ -417,9 +421,16 @@ export default function PermissionTable() {
       type: "boolean",
     },
     {
+      field: "can_delete",
+      headerName: "Delete",
+      width: 100,
+      editable: true,
+      type: "boolean",
+    },
+    {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 160,
       cellClassName: "actions",
       getActions: ({ id }) => {
@@ -453,12 +464,12 @@ export default function PermissionTable() {
             onClick={handleEditClick(id)}
             color="inherit"
           />,
-          <GridActionsCellItem
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={handleDeleteClick(id)}
-            color="inherit"
-          />,
+          // <GridActionsCellItem
+          //   icon={<DeleteIcon />}
+          //   label="Delete"
+          //   onClick={handleDeleteClick(id)}
+          //   color="inherit"
+          // />,
         ];
       },
     },

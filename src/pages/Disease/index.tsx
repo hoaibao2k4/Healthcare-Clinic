@@ -29,7 +29,13 @@ import {
 } from "@mui/x-data-grid-generator";
 import { Disease } from "@/types";
 import { toast } from "react-toastify";
-import { deleteDisease, getAllDiseases, initialDisease, updateDisease } from "@/api/apiDisease";
+import {
+  deleteDisease,
+  getAllDiseases,
+  initialDisease,
+  updateDisease,
+} from "@/api/apiDisease";
+import axios from "axios";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -163,12 +169,12 @@ export default function DiseasePage() {
 
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
-      setRows(rows.filter((row) => row.id !== id));
       const diseaseId = rows.find((row) => row.id === id)?.diseaseId;
       console.log("diseaseId", diseaseId);
       try {
         const res = await deleteDisease(diseaseId);
         if (res) {
+          setRows(rows.filter((row) => row.id !== id));
           toast.success("Xóa thành công", {
             position: "bottom-right",
             autoClose: 2000,
@@ -179,12 +185,24 @@ export default function DiseasePage() {
             progress: undefined,
           });
         }
-      } catch (err: any) {
-        console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
+      } catch (error: unknown) {
+        console.error("API request failed:", error);
+        if (axios.isAxiosError(error)) {
+          if (
+            error.response?.data.statusCode === 500 &&
+            error.response.data.message.includes("execute statement")
+          ) {
+            toast.error("Thất bại do vi phạm ràng buộc với Phiếu Khám", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+            throw new Error("Foreign key");
+          }
         }
       }
     };
@@ -202,12 +220,35 @@ export default function DiseasePage() {
     }
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
-    const updatedRow : Disease = { ...(newRow as Disease), isNew: false };
+    const updatedRow: Disease = { ...(newRow as Disease), isNew: false };
+    if (!updatedRow.diseaseName) {
+      toast.error("Tên bệnh chưa được nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!newRow.description) {
+      toast.error("Mô tả không được để trống", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Unit is empty");
+    }
     try {
       if (newRow.isNew) {
         const res = await initialDisease(updatedRow as Disease);
-        updatedRow.diseaseId = res.diseaseId;
-        if (res)
+        if (res) {
+          updatedRow.diseaseId = res.diseaseId;
           toast.success("Thêm bệnh thành công", {
             position: "bottom-right",
             autoClose: 2000,
@@ -217,6 +258,7 @@ export default function DiseasePage() {
             draggable: true,
             progress: undefined,
           });
+        }
       } else {
         const res = await updateDisease(updatedRow as Disease);
         if (res)
@@ -230,12 +272,28 @@ export default function DiseasePage() {
             progress: undefined,
           });
       }
-    } catch (err: any) {
-      console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
+    } catch (error: unknown) {
+      console.log("err: ", error);
+      if (axios.isAxiosError(error)) {
+        if (
+          error.response?.data.statusCode === 400 &&
+          error.response.data.message.includes("exists")
+        ) {
+          toast.error("Bệnh đã tồn tại", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Drug Unit had been already existed");
+        }
+      } else if (error instanceof Error) {
+        console.error("Request Err: " + error.message);
       } else {
-        console.error("Unexpected error:", err.message || err);
+        console.error("Unknown error: " + error);
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
@@ -247,10 +305,15 @@ export default function DiseasePage() {
   };
 
   const columns: GridColDef[] = [
-    { field: "diseaseName", headerName: "Tên bệnh", width: 180, editable: true },
+    {
+      field: "diseaseName",
+      headerName: "Tên bệnh",
+      width: 180,
+      editable: true,
+    },
     {
       field: "description",
-      headerName: "Mô tả",  
+      headerName: "Mô tả",
       type: "string",
       width: 520,
       editable: true,

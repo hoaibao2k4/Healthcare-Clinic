@@ -39,15 +39,16 @@ export const initialDisease = async (disease: Disease) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
+      console.log(
         error.response?.data || error.message,
         error.response?.status || "No status"
       );
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      console.error("Request Err: " + error.message);
     } else {
-      return "Unknown error: " + error;
+      console.error("Unknown error: " + error);
     }
+    throw error;
   }
 };
 
@@ -69,14 +70,14 @@ export const updateDisease = async (disease: Disease) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
+      console.log(
         error.response?.data || error.message,
         error.response?.status || "No status"
       );
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      console.log("Request Err: " + error.message);
     } else {
-      return "Unknown error: " + error;
+      console.log("Unknown error: " + error);
     }
   }
 };
@@ -89,14 +90,11 @@ export const deleteDisease = async (diseaseId: number) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };

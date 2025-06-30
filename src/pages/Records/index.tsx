@@ -27,11 +27,12 @@ import { randomId } from "@mui/x-data-grid-generator";
 import { useLocation } from "react-router-dom";
 import { Disease, ExaminationDetail, Patient } from "@/types";
 import { getAllDiseases } from "@/api/apiDisease";
-import { MenuItem } from "@mui/material";
+import { MenuItem, Modal } from "@mui/material";
 import { getAllDrugs } from "@/api/apiDrug";
 import { Drug } from "@/types/drug";
-import { updateExam, updateRecordExam } from "@/api/apiExam";
+import { getPatientRecord, updateExam, updateRecordExam } from "@/api/apiExam";
 import { toast } from "react-toastify";
+import BloodLab from "@/components/layouts/components/Modal/LIS";
 
 declare module "@mui/x-data-grid" {
   interface ToolbarPropsOverrides {
@@ -83,13 +84,43 @@ export default function PatientRecords() {
   const [selectedDiagnosis, setSelectedDiagnosis] = useState("");
   const [selectedSymptom, setSelectedSymptom] = useState("");
 
+  //modal
+
+  const [open, setOpen] = React.useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const fetchDiseases = await getAllDiseases();
-        setDiseases(fetchDiseases?.data);
-        const fetchDrug = await getAllDrugs();
-        setDrugs(fetchDrug?.data);
+        if (patient && patient.examId) {
+          const fetchDiseases = await getAllDiseases();
+          setDiseases(fetchDiseases?.data);
+          const fetchDrug = await getAllDrugs();
+          setDrugs(fetchDrug?.data);
+          const res = await getPatientRecord(patient.examId);
+
+          const disease = fetchDiseases?.data.find(
+            (r: Disease) => r.diseaseName === res.diseaseName
+          );
+          console.log(res);
+          if (res && disease && res.diseaseName) {
+            setSelectedDiagnosis(disease.diseaseId);
+            setSelectedSymptom(res.symptoms);
+
+            const dataWithId = res.examinationDetails.map(
+              (item: ExaminationDetail) => ({
+                ...item,
+                id: randomId(),
+                drugId: fetchDrug?.data.find(
+                  (drug: Drug) => drug.drugName === item.drugName
+                )?.drugId,
+              })
+            );
+            setRows(dataWithId);
+            console.log(dataWithId);
+          }
+        }
       } catch (err: any) {
         console.error("Fetch API failed:");
         if (err.name === "TypeError") {
@@ -118,6 +149,15 @@ export default function PatientRecords() {
   };
 
   const handleDeleteClick = (id: GridRowId) => () => {
+    toast.success("Xóa thuốc thành công", {
+      position: "bottom-right",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
     setRows(rows.filter((row) => row.id !== id));
   };
 
@@ -140,17 +180,64 @@ export default function PatientRecords() {
       isNew: false,
       drugs: selectedDrug!,
     };
-
-    setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
-    toast.success("Thêm thuốc thành công", {
-      position: "bottom-right",
-      autoClose: 2000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
+    console.log(updatedRow);
+    const quantity = Number(updatedRow.quantity);
+    if (!updatedRow.drugId) {
+      toast.error("Thuốc chưa được chọn", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!updatedRow.note) {
+      toast.error("Cách dùng chưa nhập", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (!Number.isInteger(quantity) || quantity < 1) {
+      toast.error("Số lượng không hợp lệ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else if (quantity > selectedDrug?.quantity!) {
+      toast.error("Số lượng thuốc không đủ", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid Null");
+    } else {
+      setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+      toast.success("Thêm thuốc thành công", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
 
     return updatedRow;
   };
@@ -160,8 +247,8 @@ export default function PatientRecords() {
   };
 
   const handleSaveRecord = async () => {
-    if (!(rows && selectedDiagnosis && selectedSymptom)) {
-      toast.error("Bác sĩ chưa khám cho bệnh nhân", {
+    if (!patient) {
+      toast.error("Chưa có thông tin bệnh nhân", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -170,8 +257,8 @@ export default function PatientRecords() {
         draggable: true,
         progress: undefined,
       });
-    } else if (rows.length < 1) {
-      toast.error("Bác sĩ chưa kê đơn thuốc", {
+    } else if (!(rows && selectedDiagnosis && selectedSymptom)) {
+      toast.error("Bệnh nhân chưa được khám", {
         position: "bottom-right",
         autoClose: 2000,
         hideProgressBar: false,
@@ -200,8 +287,8 @@ export default function PatientRecords() {
         const resRecord = await updateRecordExam(patient?.examId, rows);
         console.log("res: ", res);
         console.log("res cord: ", resRecord);
-        if (res && resRecord) {
-          toast.success("Thêm thông tin thành công", {
+        if (res) {
+          toast.success("Lưu thông tin thành công", {
             position: "bottom-right",
             autoClose: 2000,
             hideProgressBar: false,
@@ -228,15 +315,26 @@ export default function PatientRecords() {
       headerName: "Thuốc",
       width: 240,
       editable: true,
-      valueOptions: drugs?.map((drug) => ({
-        label: drug.drugName,
-        value: drug.drugId,
-      })),
       type: "singleSelect",
-      valueGetter: (value) => {
-        return value || "";
+      valueGetter: (value) => value || "",
+      valueOptions: (params) => {
+        const selectedDrugIds = rows
+          .filter((row) => row.id !== params.id && row.drugId)
+          .map((row) => row.drugId);
+
+        const availableDrugs = drugs?.filter(
+          (drug) => !selectedDrugIds.includes(drug.drugId)
+        );
+
+        return (
+          availableDrugs?.map((drug) => ({
+            label: drug.drugName,
+            value: drug.drugId,
+          })) || []
+        );
       },
     },
+
     {
       field: "unitName",
       headerName: "Đơn vị",
@@ -246,7 +344,7 @@ export default function PatientRecords() {
       headerAlign: "left",
       editable: false,
       valueGetter: (params, row) => {
-        return row.drugs?.drugsUnit?.unitName || "Chưa có";
+        return row.unitName || row.drugs?.drugsUnit?.unitName || "Chưa có";
       },
     },
     {
@@ -268,7 +366,7 @@ export default function PatientRecords() {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Thao tác",
       width: 120,
       cellClassName: "actions",
       getActions: ({ id }) => {
@@ -317,10 +415,17 @@ export default function PatientRecords() {
     <div className="bg-white p-4 rounded-2xl">
       <div className="flex justify-between w-full">
         <h1 className="text-2xl font-bold p-2 ">Lập phiếu khám</h1>
-        <div className="mx-6 my-2">
-          <Button variant="contained" onClick={handleSaveRecord}>
-            Lưu kết quả
-          </Button>
+        <div className="flex">
+          <div className="my-2">
+            <Button variant="contained" onClick={handleOpen}>
+              KQXN
+            </Button>
+          </div>
+          <div className="mx-6 my-2">
+            <Button variant="contained" onClick={handleSaveRecord}>
+              Lưu kết quả
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -330,6 +435,7 @@ export default function PatientRecords() {
           label="Họ tên"
           variant="outlined"
           size="medium"
+          disabled
           value={patient?.fullName}
           sx={{
             "& .MuiInputLabel-root": {
@@ -340,7 +446,7 @@ export default function PatientRecords() {
             },
           }}
         />
-        <BasicDatePicker />
+        <BasicDatePicker disable={true} />
         <TextField
           id="symptom"
           label="Triệu chứng"
@@ -391,6 +497,18 @@ export default function PatientRecords() {
           }}
         />
       </Box>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        {
+          <>
+            <BloodLab patient={patient!} />
+          </>
+        }
+      </Modal>
     </div>
   );
 }

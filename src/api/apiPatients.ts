@@ -26,22 +26,27 @@ export const initialPatient = async (patient: Patient) => {
       fullName: patient.fullName,
       gender:
         typeof patient.gender === "string"
-          ? (patient.gender).toLowerCase() === "nam"
+          ? patient.gender.toLowerCase() === "nam"
             ? "true"
             : "false"
           : patient.gender
-          ? "true"
-          : "false",
+            ? "true"
+            : "false",
       address: patient.address,
       yearOfBirth: patient.yearOfBirth,
       phoneNumber: patient.phoneNumber,
       residentalIdentity: patient.residentalIdentity,
     });
-    const res = await response.post("/api/public/patients/add-patient", formData, {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
+
+    const res = await response.post(
+      "/api/public/patients/add-patient",
+      formData,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
 
     return res.data;
   } catch (err: unknown) {
@@ -50,8 +55,11 @@ export const initialPatient = async (patient: Patient) => {
         err.response?.data || err.message,
         err.response?.status || "No status"
       );
+
+      throw err || new Error("Unknown axios error");
     } else {
       console.error("Unknown error:", err);
+      throw err;
     }
   }
 };
@@ -62,12 +70,12 @@ export const updatePatient = async (patient: Patient) => {
       fullName: patient.fullName,
       gender:
         typeof patient.gender === "string"
-          ? (patient.gender).toLowerCase() === "nam"
+          ? patient.gender.toLowerCase() === "nam"
             ? "true"
             : "false"
           : patient.gender
-          ? "true"
-          : "false",
+            ? "true"
+            : "false",
       address: patient.address,
       yearOfBirth: patient.yearOfBirth,
       phoneNumber: patient.phoneNumber,
@@ -75,11 +83,15 @@ export const updatePatient = async (patient: Patient) => {
     });
     console.log("formData", formData);
     console.log("patient", patient);
-    const res = await response.patch(`/api/public/patients/edit-patient/${patient.patientId}`, formData, {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
+    const res = await response.patch(
+      `/api/public/patients/edit-patient/${patient.patientId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
 
     return res.data;
   } catch (err: unknown) {
@@ -88,8 +100,11 @@ export const updatePatient = async (patient: Patient) => {
         err.response?.data || err.message,
         err.response?.status || "No status"
       );
+
+      throw err || new Error("Unknown axios error");
     } else {
       console.error("Unknown error:", err);
+      throw err;
     }
   }
 };
@@ -102,19 +117,18 @@ export const deletePatient = async (patientId: string) => {
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
-      console.error(
-        err.response?.data || err.message,
-        err.response?.status || "No status"
-      );
+      throw err || "No status";
     } else {
-      console.error("Unknown error:", err);
+      throw err;
     }
   }
 };
 
-export const getPatientsWaiting = async (examinationDate : string) => {
+export const getPatientsWaiting = async (examinationDate: string) => {
   try {
-    const res = await response.get(`/api/public/examination/waiting?examinationDate=${examinationDate}`);
+    const res = await response.get(
+      `/api/public/examination/waiting?examinationDate=${examinationDate}&size=${40}`
+    );
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
@@ -130,9 +144,11 @@ export const getPatientsWaiting = async (examinationDate : string) => {
   }
 };
 
-export const getPatientsDiagnosis = async (examinationDate : string) => {
+export const getPatientsDiagnosis = async (examinationDate: string) => {
   try {
-    const res = await response.get(`/api/public/examination/patients?examinationDate=${examinationDate}`);
+    const res = await response.get(
+      `/api/public/examination/patients?examinationDate=${examinationDate}`
+    );
     return res.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {
@@ -147,5 +163,3 @@ export const getPatientsDiagnosis = async (examinationDate : string) => {
     }
   }
 };
-
-

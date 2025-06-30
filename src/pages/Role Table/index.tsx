@@ -34,6 +34,7 @@ import { createRole, deleteRole, getAllRoles } from "@/api/apiRole";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { Role } from "@/types";
+import axios from "axios";
 ////////////
 const roles = ["Market", "Finance", "Development"];
 const randomRole = () => {
@@ -139,7 +140,10 @@ export default function RoleTable() {
             ...item,
             id: id + index,
           }));
-          setRows(dataWithId);
+          const roleWithoutAdmin = dataWithId.filter(
+            (item: Role) => item.role_name !== "ADMIN"
+          );
+          setRows(roleWithoutAdmin);
           setId(id + res.length);
         }
       } catch (err: any) {
@@ -173,7 +177,6 @@ export default function RoleTable() {
 
   const handleDeleteClick = (id: GridRowId) => {
     return async () => {
-      setRows(rows.filter((row) => row.id !== id));
       const roleId = rows.find((row) => row.id === id)?.role_id;
       console.log("roleId", roleId);
       try {
@@ -190,14 +193,27 @@ export default function RoleTable() {
             });
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("API request failed:", err);
-        if (err.name === "TypeError") {
-          console.error("Network error or CORS issue:", err.message);
-        } else {
-          console.error("Unexpected error:", err.message || err);
+        if (axios.isAxiosError(err)) {
+          if (
+            err.response?.data.statusCode === 500 &&
+            err.response.data.message.includes("execute statement")
+          ) {
+            toast.error("Thất bại do vi phạm ràng buộc với Quản lí quyền!", {
+              position: "bottom-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+            throw new Error("Foreign key");
+          }
         }
       }
+      setRows(rows.filter((row) => row.id !== id));
     };
   };
 
@@ -213,7 +229,44 @@ export default function RoleTable() {
     }
   };
   const processRowUpdate = async (newRow: GridRowModel) => {
+    const matchedRole = (rows as Role[]).find(
+      (item) => item.role_name === newRow.role_name
+    );
     const updatedRow: Role = { ...(newRow as Role), isNew: false };
+    if (!updatedRow.role_name) {
+      toast.error("Chưa nhập vai trò", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (!updatedRow.description) {
+      toast.error("Chưa nhập mô tả", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    } else if (matchedRole?.role_name === updatedRow.role_name) {
+      toast.error("Vai trò đã tồn tại", {
+        position: "bottom-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      throw new Error("Invalid null");
+    }
     try {
       if (permissionUser && permissionUser.accessToken) {
         const res = await createRole(
@@ -233,12 +286,24 @@ export default function RoleTable() {
             progress: undefined,
           });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("API request failed:", err);
-      if (err.name === "TypeError") {
-        console.error("Network error or CORS issue:", err.message);
-      } else {
-        console.error("Unexpected error:", err.message || err);
+      if (axios.isAxiosError(err)) {
+        if (
+          err.response?.data.statusCode === 500 &&
+          err.response.data.message.includes("execute statement")
+        ) {
+          toast.error("Lỗi!", {
+            position: "bottom-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
+          throw new Error("Foreign key");
+        }
       }
     }
     setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));

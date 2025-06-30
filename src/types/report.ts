@@ -22,7 +22,7 @@ export interface DayReport {
 
 export interface DrugReport {
     reportUsageId: number,
-    drug: Drug[],
+    drug: Drug,
     month: number,
     year: number,
     usageNumber: number

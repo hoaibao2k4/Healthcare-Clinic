@@ -44,6 +44,12 @@ export default function RoleModal({ user }: RoleProps) {
     return !role;
   });
 
+  React.useEffect(() => {
+    if (user?.available_roles && user?.available_roles.length < 1) {
+      setOpen(false)
+    }
+  }, [user])
+
   const dispatch = useDispatch();
   const handleLoginWithPermission = async (role: string) => {
     console.log(role);

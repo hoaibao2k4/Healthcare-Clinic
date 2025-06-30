@@ -37,16 +37,17 @@ export const initialDrugUnit = async (drugUnit: DrugUnit) => {
       }
     );
     return res.data;
-  } catch (error: any) {
-    if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
+  } catch (err: any) {
+    if (axios.isAxiosError(err)) {
+      console.error(
+        err.response?.data || err.message,
+        err.response?.status || "No status"
       );
-    } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+
+      throw err || new Error("Unknown axios error");
     } else {
-      return "Unknown error: " + error;
+      console.error("Unknown error:", err);
+      throw err;
     }
   }
 };
@@ -89,14 +90,11 @@ export const deleteDrugUnit = async (unitId: number) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };
@@ -135,17 +133,18 @@ export const initialDrug = async (drug: Drug) => {
       },
     });
     return res.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return (
+      console.log(
         error.response?.data || error.message,
         error.response?.status || "No status"
       );
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      console.log("Request Err: " + error.message);
     } else {
-      return "Unknown error: " + error;
+      console.log("Unknown error: " + error);
     }
+    throw error;
   }
 };
 
@@ -169,17 +168,18 @@ export const updateDrug = async (drug: Drug) => {
       }
     );
     return res.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      return (
+      console.log(
         error.response?.data || error.message,
         error.response?.status || "No status"
       );
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      console.log("Request Err: " + error.message);
     } else {
-      return "Unknown error: " + error;
+      console.log("Unknown error: " + error);
     }
+    throw error;
   }
 };
 
@@ -191,14 +191,11 @@ export const deleteDrug = async (drugId: number) => {
     return res.data;
   } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      return (
-        error.response?.data || error.message,
-        error.response?.status || "No status"
-      );
+      throw error || "No status";
     } else if (error instanceof Error) {
-      return "Request Err: " + error.message;
+      throw "Request Err: " + error.message;
     } else {
-      return "Unknown error: " + error;
+      throw "Unknown error: " + error;
     }
   }
 };
